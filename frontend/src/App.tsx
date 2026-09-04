@@ -12,7 +12,6 @@ import AdminDashboard from './pages/admin/Dashboard'
 import AdminTickets from './pages/admin/Tickets'
 import AdminTicketDetails from './pages/admin/TicketDetails'
 import AdminAnalytics from './pages/admin/Analytics'
-import DiagnoseTest from './pages/DiagnoseTest'
 
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -29,7 +28,6 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/diagnose-test" element={<DiagnoseTest />} />
       <Route path="/scan" element={<Scan />} />
       <Route path="/analyzing" element={<Analyzing />} />
       <Route path="/diagnosis" element={<Diagnosis />} />
