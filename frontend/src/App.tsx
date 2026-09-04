@@ -10,6 +10,7 @@ import Verify from './pages/Verify'
 import Success from './pages/Success'
 import Escalate from './pages/Escalate'
 import SelectRouter from './pages/SelectRouter'
+import { LoadingState } from './components/ui/LoadingState'
 
 // Code-split: only the admin pages pull in Recharts. Lazy-loading them keeps
 // that weight out of the customer-facing bundle, which is the actual demo path.
@@ -19,7 +20,7 @@ const AdminTicketDetails = lazy(() => import('./pages/admin/TicketDetails'))
 const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'))
 
 function AdminFallback() {
-  return <p className="p-8 text-text-secondary">Loading…</p>
+  return <LoadingState />
 }
 
 export default function App() {

@@ -5,6 +5,7 @@ import { TrendLineChart } from '../../components/admin/TrendLineChart'
 import { CategoryBarChart } from '../../components/admin/CategoryBarChart'
 import { DateRangeFilter, type DateRangeOption } from '../../components/admin/DateRangeFilter'
 import { filterTrend } from '../../utils/trend'
+import { LoadingState } from '../../components/ui/LoadingState'
 import type { AnalyticsSummary } from '../../types'
 
 const METRICS: Array<{ key: keyof AnalyticsSummary; label: string; format: (value: AnalyticsSummary) => string }> = [
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
       </header>
 
       {!analytics ? (
-        <p className="text-text-secondary">Loading…</p>
+        <LoadingState />
       ) : (
         <>
           <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

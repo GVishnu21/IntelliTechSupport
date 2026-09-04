@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Router } from 'lucide-react'
+import { ErrorState } from '../components/ui/ErrorState'
 import { analyzeRouter } from '../services/api'
 
 const CHECKLIST = [
@@ -51,16 +52,13 @@ export default function Analyzing() {
 
   if (error) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-        <h1 className="text-xl font-bold text-text">{error}</h1>
-        <p className="text-base text-text-secondary">Check your connection and try again.</p>
-        <button
-          type="button"
-          onClick={() => navigate('/scan', { replace: true })}
-          className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white"
-        >
-          Try another photo
-        </button>
+      <div className="flex min-h-dvh flex-col">
+        <ErrorState
+          title={error}
+          description="Check your connection and try again."
+          actionLabel="Try another photo"
+          onAction={() => navigate('/scan', { replace: true })}
+        />
       </div>
     )
   }

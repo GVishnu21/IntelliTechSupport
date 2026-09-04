@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TriangleAlert } from 'lucide-react'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { Button } from '../components/ui/Button'
+import { SecondaryButton } from '../components/ui/SecondaryButton'
 import type { OutageInfo, RouterDiagnosis } from '../types'
 
 interface OutageLocationState {
@@ -12,6 +15,7 @@ export default function Outage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { outage, diagnosis } = (location.state as OutageLocationState) ?? {}
+  const [showDetails, setShowDetails] = useState(false)
 
   function handleTroubleshootAnyway() {
     if (!diagnosis) {
@@ -38,6 +42,11 @@ export default function Outage() {
         <p className="text-sm text-text-secondary">Estimated restoration</p>
         <p className="text-lg font-semibold text-text">{outage?.estimatedRestoration ?? '—'}</p>
         <p className="text-sm text-text-secondary">Location: {outage?.area ?? 'Your area'}</p>
+        {showDetails && (
+          <p className="border-t border-border pt-2 text-sm text-text">
+            {outage?.message ?? "We've detected a known service issue affecting your area."}
+          </p>
+        )}
       </div>
 
       <p className="mt-6 text-center text-base text-text">
@@ -45,19 +54,10 @@ export default function Outage() {
       </p>
 
       <div className="mt-auto space-y-3 pt-4">
-        <button
-          type="button"
-          className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-        >
-          View Outage Details
-        </button>
-        <button
-          type="button"
-          onClick={handleTroubleshootAnyway}
-          className="flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-primary transition-colors duration-200 hover:bg-slate-50"
-        >
-          Try Troubleshooting Anyway
-        </button>
+        <Button onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails}>
+          {showDetails ? 'Hide Outage Details' : 'View Outage Details'}
+        </Button>
+        <SecondaryButton onClick={handleTroubleshootAnyway}>Try Troubleshooting Anyway</SecondaryButton>
       </div>
     </CustomerLayout>
   )

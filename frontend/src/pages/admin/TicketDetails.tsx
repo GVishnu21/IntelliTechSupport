@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { getTicket } from '../../services/api'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { LedStatusList } from '../../components/diagnosis/LedStatusList'
+import { RouterImage } from '../../components/diagnosis/RouterImage'
+import { LoadingState } from '../../components/ui/LoadingState'
 import type { SupportTicket } from '../../types'
 
 const OUTCOME_LABEL: Record<'completed' | 'failed' | 'skipped', string> = {
@@ -25,7 +27,7 @@ export default function AdminTicketDetails() {
   }
 
   if (ticket === undefined) {
-    return <p className="p-8 text-text-secondary">Loading…</p>
+    return <LoadingState />
   }
 
   if (!ticket) {
@@ -51,11 +53,14 @@ export default function AdminTicketDetails() {
       </header>
 
       <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm text-text-secondary">Customer</p>
-          <p className="text-base font-medium text-text">{ticket.customer}</p>
-          <p className="mt-2 text-sm text-text-secondary">Router</p>
-          <p className="text-base font-medium text-text">{ticket.router}</p>
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <RouterImage alt={ticket.router} />
+          <div>
+            <p className="text-sm text-text-secondary">Customer</p>
+            <p className="text-base font-medium text-text">{ticket.customer}</p>
+            <p className="mt-2 text-sm text-text-secondary">Router</p>
+            <p className="text-base font-medium text-text">{ticket.router}</p>
+          </div>
         </div>
 
         <LedStatusList lights={ticket.ledStatus} />

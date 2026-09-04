@@ -32,7 +32,7 @@ export function DateRangeFilter({
           type="button"
           onClick={() => onChange(option.value)}
           aria-pressed={value === option.value}
-          className={`min-h-11 rounded-full border px-4 text-sm font-medium ${
+          className={`min-h-11 rounded-full border px-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
             value === option.value
               ? 'border-primary bg-primary text-white'
               : 'border-border bg-card text-text-secondary'

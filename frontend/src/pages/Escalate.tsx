@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Headset } from 'lucide-react'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { Button } from '../components/ui/Button'
+import { SecondaryButton } from '../components/ui/SecondaryButton'
+import { ErrorState } from '../components/ui/ErrorState'
 import { escalate } from '../services/api'
 
 interface EscalateLocationState {
@@ -42,13 +45,9 @@ export default function Escalate() {
           <p className="text-base text-text-secondary">
             An agent has your diagnosis and troubleshooting history.
           </p>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="mt-4 flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-          >
-            Finish
-          </button>
+          <div className="mt-4 w-full">
+            <Button onClick={() => navigate('/')}>Finish</Button>
+          </div>
         </div>
       </CustomerLayout>
     )
@@ -75,24 +74,13 @@ export default function Escalate() {
           <p className="text-sm font-medium text-error">Still unresolved</p>
         </div>
 
-        {error && <p className="text-center text-error">{error}</p>}
+        {error && <ErrorState title={error} inline />}
 
         <div className="mt-auto space-y-3">
-          <button
-            type="button"
-            onClick={handleContactSupport}
-            disabled={busy || !sessionId}
-            className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button onClick={handleContactSupport} disabled={busy || !sessionId}>
             {busy ? 'Contacting support…' : 'Contact Support'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-primary transition-colors duration-200 hover:bg-slate-50"
-          >
-            Start Over
-          </button>
+          </Button>
+          <SecondaryButton onClick={() => navigate('/')}>Start Over</SecondaryButton>
         </div>
       </div>
     </CustomerLayout>

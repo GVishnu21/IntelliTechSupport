@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { CircleHelp, Router } from 'lucide-react'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { BUTTON_PRIMARY_CLASS, BUTTON_SECONDARY_CLASS } from '../components/ui/buttonStyles'
 
 export default function Home() {
   return (
@@ -28,16 +29,10 @@ export default function Home() {
         </div>
 
         <div className="w-full space-y-3">
-          <Link
-            to="/scan"
-            className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
+          <Link to="/scan" className={BUTTON_PRIMARY_CLASS}>
             Scan My Router
           </Link>
-          <Link
-            to="/select-router"
-            className="flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-primary transition-colors duration-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
+          <Link to="/select-router" className={BUTTON_SECONDARY_CLASS}>
             Select Router Manually
           </Link>
         </div>

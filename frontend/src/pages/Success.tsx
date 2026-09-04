@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CircleCheckBig } from 'lucide-react'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { Button } from '../components/ui/Button'
 import { StarRating } from '../components/ui/StarRating'
 
 interface SuccessLocationState {
@@ -55,13 +56,7 @@ export default function Success() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleFinish}
-          className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-        >
-          Finish
-        </button>
+        <Button onClick={handleFinish}>Finish</Button>
 
         <div className="space-y-3 border-t border-border pt-4 text-center">
           <p className="text-base font-medium text-text">How was your experience?</p>

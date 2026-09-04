@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { Button } from '../components/ui/Button'
+import { SecondaryButton } from '../components/ui/SecondaryButton'
 import { DiagnosisCard } from '../components/diagnosis/DiagnosisCard'
 import { checkOutage } from '../services/api'
 import type { RouterDiagnosis } from '../types'
@@ -66,20 +68,8 @@ export default function Diagnosis() {
         </div>
 
         <div className="mt-auto space-y-3 pt-4">
-          <button
-            type="button"
-            onClick={() => navigate('/scan', { replace: true })}
-            className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-          >
-            Try another photo
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/select-router')}
-            className="flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-primary transition-colors duration-200 hover:bg-slate-50"
-          >
-            Select router manually
-          </button>
+          <Button onClick={() => navigate('/scan', { replace: true })}>Try another photo</Button>
+          <SecondaryButton onClick={() => navigate('/select-router')}>Select router manually</SecondaryButton>
         </div>
       </CustomerLayout>
     )
@@ -95,21 +85,9 @@ export default function Diagnosis() {
 
       <div className="mt-auto space-y-3 pt-4">
         {diagnosis.firstStep ? (
-          <button
-            type="button"
-            onClick={handleStartTroubleshooting}
-            className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-          >
-            Start Troubleshooting
-          </button>
+          <Button onClick={handleStartTroubleshooting}>Start Troubleshooting</Button>
         ) : (
-          <button
-            type="button"
-            onClick={handleAlreadyFixed}
-            className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-          >
-            Everything looks fine now
-          </button>
+          <Button onClick={handleAlreadyFixed}>Everything looks fine now</Button>
         )}
         <button
           type="button"

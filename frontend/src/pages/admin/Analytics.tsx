@@ -5,6 +5,7 @@ import { TrendLineChart } from '../../components/admin/TrendLineChart'
 import { CategoryBarChart } from '../../components/admin/CategoryBarChart'
 import { DateRangeFilter, type DateRangeOption } from '../../components/admin/DateRangeFilter'
 import { filterTrend } from '../../utils/trend'
+import { LoadingState } from '../../components/ui/LoadingState'
 import type { AnalyticsSummary } from '../../types'
 
 export default function AdminAnalytics() {
@@ -27,7 +28,7 @@ export default function AdminAnalytics() {
   )
 
   if (!analytics) {
-    return <p className="p-8 text-text-secondary">Loading…</p>
+    return <LoadingState />
   }
 
   const stats: Array<[string, string]> = [

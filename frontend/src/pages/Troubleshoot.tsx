@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { Button } from '../components/ui/Button'
 import { StepIndicator } from '../components/ui/StepIndicator'
 import { TroubleshootingCard } from '../components/troubleshooting/TroubleshootingCard'
 import type { TroubleshootingStep } from '../types'
@@ -43,13 +44,7 @@ export default function Troubleshoot() {
         </div>
 
         <div className="sticky bottom-0 space-y-2 bg-background pb-2 pt-4">
-          <button
-            type="button"
-            onClick={goToVerify}
-            className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-          >
-            I've done this
-          </button>
+          <Button onClick={goToVerify}>I've done this</Button>
           <button
             type="button"
             onClick={goToVerify}

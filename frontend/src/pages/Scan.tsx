@@ -2,6 +2,8 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CameraCapture from '../components/CameraCapture'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { Button } from '../components/ui/Button'
+import { SecondaryButton } from '../components/ui/SecondaryButton'
 
 type ScanPhase = 'capture' | 'review' | 'permission-error'
 
@@ -76,13 +78,7 @@ export default function Scan() {
             Allow camera access to scan your router.
           </p>
           <div className="w-full max-w-xs space-y-3">
-            <button
-              type="button"
-              onClick={handleRetryCamera}
-              className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-            >
-              Enable Camera
-            </button>
+            <Button onClick={handleRetryCamera}>Enable Camera</Button>
             <button
               type="button"
               onClick={handleUploadClick}
@@ -143,20 +139,8 @@ export default function Scan() {
           />
 
           <div className="mt-auto space-y-3">
-            <button
-              type="button"
-              onClick={handleUseThisPhoto}
-              className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
-            >
-              Use This Photo
-            </button>
-            <button
-              type="button"
-              onClick={handleRetake}
-              className="flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-primary transition-colors duration-200 hover:bg-slate-50"
-            >
-              Retake
-            </button>
+            <Button onClick={handleUseThisPhoto}>Use This Photo</Button>
+            <SecondaryButton onClick={handleRetake}>Retake</SecondaryButton>
           </div>
         </div>
       )}

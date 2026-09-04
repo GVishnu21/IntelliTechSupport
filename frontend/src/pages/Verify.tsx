@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import CameraCapture from '../components/CameraCapture'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { ErrorState } from '../components/ui/ErrorState'
 import { verifyStepWithPhoto } from '../services/api'
 import type { TroubleshootingStep } from '../types'
 
@@ -68,7 +69,7 @@ export default function Verify() {
           <p className="text-base leading-6 text-text-secondary">Check your router lights and connection.</p>
         </div>
 
-        {error && <p className="text-center text-error">{error}</p>}
+        {error && <ErrorState title={error} inline />}
 
         <CameraCapture
           busy={busy}

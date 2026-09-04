@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { EmptyState } from '../components/ui/EmptyState'
 import { getMockDiagnosis, getRouterCatalog } from '../services/api'
 import type { RouterCatalogEntry } from '../types'
 
@@ -43,7 +44,8 @@ export default function SelectRouter() {
           <button
             type="button"
             onClick={() => setProvider(null)}
-            className={`min-h-11 rounded-full border px-4 text-sm font-medium ${
+            aria-pressed={provider === null}
+            className={`min-h-11 rounded-full border px-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               provider === null ? 'border-primary bg-primary text-white' : 'border-border bg-card text-text-secondary'
             }`}
           >
@@ -54,7 +56,8 @@ export default function SelectRouter() {
               key={p}
               type="button"
               onClick={() => setProvider(p)}
-              className={`min-h-11 rounded-full border px-4 text-sm font-medium ${
+              aria-pressed={provider === p}
+              className={`min-h-11 rounded-full border px-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 provider === p ? 'border-primary bg-primary text-white' : 'border-border bg-card text-text-secondary'
               }`}
             >
@@ -79,9 +82,7 @@ export default function SelectRouter() {
               </span>
             </button>
           ))}
-          {filtered.length === 0 && (
-            <p className="py-8 text-center text-text-secondary">No routers match your search.</p>
-          )}
+          {filtered.length === 0 && <EmptyState title="No routers match your search." />}
         </div>
       </div>
     </CustomerLayout>
