@@ -52,6 +52,7 @@ def diagnose(payload: ImageRequest) -> DiagnosisResponse:
         StepInfo(
             instruction=first_step["instruction"],
             step_number=1,
+            total_steps=len(session.steps),
             checklist=first_step.get("checklist", []),
             note=first_step.get("note"),
         )
@@ -84,6 +85,7 @@ def verify(payload: ImageRequest) -> VerifyStepResponse:
         StepInfo(
             instruction=next_step_data["instruction"],
             step_number=step_number,
+            total_steps=len(session.steps) if session else 0,
             checklist=next_step_data.get("checklist", []),
             note=next_step_data.get("note"),
         )

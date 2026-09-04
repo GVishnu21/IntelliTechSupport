@@ -23,7 +23,7 @@ describe('analyzeRouter', () => {
         equipment: 'Netgear Nighthawk R7000',
         confidence: 0.92,
         status_lights: { power: 'solid_green', internet: 'blinking_red', wifi: 'solid_green' },
-        next_step: { instruction: 'Restart your router.', step_number: 1 },
+        next_step: { instruction: 'Restart your router.', step_number: 1, total_steps: 3 },
         low_confidence: false,
       }),
     })
@@ -108,7 +108,7 @@ describe('verifyStepWithPhoto', () => {
         json: async () => ({
           resolved: false,
           escalate: false,
-          next_step: { instruction: 'Check the cable.', step_number: 2 },
+          next_step: { instruction: 'Check the cable.', step_number: 2, total_steps: 3 },
           status_lights: {},
         }),
       })
@@ -125,6 +125,24 @@ describe('verifyStepWithPhoto', () => {
     })
   })
 
+  it('reports the real total step count from the backend, not an assumed one', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          resolved: false,
+          escalate: false,
+          next_step: { instruction: 'Check the cable.', step_number: 2, total_steps: 5 },
+          status_lights: {},
+        }),
+      })
+    )
+
+    const result = await verifyStepWithPhoto('session-1', 'img')
+    expect(result.nextStep?.totalSteps).toBe(5)
+  })
+
   it('passes through checklist and note when the backend provides them', async () => {
     vi.stubGlobal(
       'fetch',
@@ -136,6 +154,7 @@ describe('verifyStepWithPhoto', () => {
           next_step: {
             instruction: 'Check the cable.',
             step_number: 2,
+            total_steps: 3,
             checklist: ['Cable is connected to the correct port', 'Cable is firmly connected'],
             note: "Don't bend the fiber cable sharply.",
           },

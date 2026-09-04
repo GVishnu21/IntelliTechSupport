@@ -11,6 +11,7 @@ class ImageRequest(BaseModel):
 class StepInfo(BaseModel):
     instruction: str
     step_number: int
+    total_steps: int
     checklist: list[str] = []
     note: Optional[str] = None
 
