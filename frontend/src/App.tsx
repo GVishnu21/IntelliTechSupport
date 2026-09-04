@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import Scan from './pages/Scan'
 import Analyzing from './pages/Analyzing'
 import Diagnosis from './pages/Diagnosis'
+import Troubleshoot from './pages/Troubleshoot'
 import DiagnoseTest from './pages/DiagnoseTest'
 
 function ComingSoon({ label }: { label: string }) {
@@ -25,7 +26,7 @@ export default function App() {
       <Route path="/analyzing" element={<Analyzing />} />
       <Route path="/diagnosis" element={<Diagnosis />} />
       <Route path="/outage" element={<ComingSoon label="Service Status" />} />
-      <Route path="/troubleshoot" element={<ComingSoon label="Troubleshooting" />} />
+      <Route path="/troubleshoot" element={<Troubleshoot />} />
       <Route path="/verify" element={<ComingSoon label="Step Complete?" />} />
       <Route path="/success" element={<ComingSoon label="You're Back Online!" />} />
       <Route path="/escalate" element={<ComingSoon label="We Couldn't Fix It" />} />

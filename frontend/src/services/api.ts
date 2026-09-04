@@ -58,9 +58,13 @@ function deriveIssueMessage(statusLights: Record<string, string>): string {
 
 function toStep(step: BackendStepInfo | null): TroubleshootingStep | null {
   if (!step) return null
+  // The backend never reports a total step count for the session, only the
+  // current step number. Every playbook in backend/app/orchestration/playbooks.py
+  // currently has 3 steps, so use that as a reasonable displayed denominator
+  // rather than blocking the UI on a backend change.
   return {
     stepNumber: step.step_number,
-    totalSteps: step.step_number,
+    totalSteps: Math.max(step.step_number, 3),
     title: `Step ${step.step_number}`,
     description: step.instruction,
     checklist: [],
