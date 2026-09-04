@@ -4,6 +4,8 @@ import Scan from './pages/Scan'
 import Analyzing from './pages/Analyzing'
 import Diagnosis from './pages/Diagnosis'
 import Troubleshoot from './pages/Troubleshoot'
+import Verify from './pages/Verify'
+import Escalate from './pages/Escalate'
 import DiagnoseTest from './pages/DiagnoseTest'
 
 function ComingSoon({ label }: { label: string }) {
@@ -27,9 +29,9 @@ export default function App() {
       <Route path="/diagnosis" element={<Diagnosis />} />
       <Route path="/outage" element={<ComingSoon label="Service Status" />} />
       <Route path="/troubleshoot" element={<Troubleshoot />} />
-      <Route path="/verify" element={<ComingSoon label="Step Complete?" />} />
+      <Route path="/verify" element={<Verify />} />
       <Route path="/success" element={<ComingSoon label="You're Back Online!" />} />
-      <Route path="/escalate" element={<ComingSoon label="We Couldn't Fix It" />} />
+      <Route path="/escalate" element={<Escalate />} />
       <Route path="/select-router" element={<ComingSoon label="Select Your Router" />} />
       <Route path="/admin" element={<ComingSoon label="Admin Dashboard" />} />
       <Route path="/admin/tickets" element={<ComingSoon label="Support Tickets" />} />
