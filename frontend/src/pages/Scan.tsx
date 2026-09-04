@@ -6,6 +6,7 @@ export default function Scan() {
   const navigate = useNavigate()
 
   function handleCapture(imageBase64: string) {
+    sessionStorage.setItem('flowStartedAt', String(Date.now()))
     navigate('/analyzing', { state: { imageBase64 } })
   }
 

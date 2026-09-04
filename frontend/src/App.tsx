@@ -5,6 +5,7 @@ import Analyzing from './pages/Analyzing'
 import Diagnosis from './pages/Diagnosis'
 import Troubleshoot from './pages/Troubleshoot'
 import Verify from './pages/Verify'
+import Success from './pages/Success'
 import Escalate from './pages/Escalate'
 import DiagnoseTest from './pages/DiagnoseTest'
 
@@ -30,7 +31,7 @@ export default function App() {
       <Route path="/outage" element={<ComingSoon label="Service Status" />} />
       <Route path="/troubleshoot" element={<Troubleshoot />} />
       <Route path="/verify" element={<Verify />} />
-      <Route path="/success" element={<ComingSoon label="You're Back Online!" />} />
+      <Route path="/success" element={<Success />} />
       <Route path="/escalate" element={<Escalate />} />
       <Route path="/select-router" element={<ComingSoon label="Select Your Router" />} />
       <Route path="/admin" element={<ComingSoon label="Admin Dashboard" />} />
