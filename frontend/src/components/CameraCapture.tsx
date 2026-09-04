@@ -4,12 +4,14 @@ interface CameraCaptureProps {
   onCapture: (imageBase64: string) => void
   busy: boolean
   prompt: string
+  onError?: (message: string) => void
 }
 
 export default function CameraCapture({
   onCapture,
   busy,
   prompt,
+  onError,
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -18,6 +20,17 @@ export default function CameraCapture({
   const [error, setError] = useState<string | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
+
+  // Only startup-phase errors (camera never became ready) mean the customer
+  // has no working camera at all — surface those to the parent so it can
+  // swap in a branded "camera access needed" screen. A capture-time error
+  // after the camera was already working is a different, rarer case that
+  // this component's own inline error message already covers.
+  useEffect(() => {
+    if (error && !cameraReady) {
+      onError?.(error)
+    }
+  }, [error, cameraReady, onError])
 
   // If a request fails, `busy` goes back to false while this component stays
   // mounted (same screen) — drop the freeze-frame so the customer sees the
