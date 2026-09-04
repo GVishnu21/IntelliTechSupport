@@ -1,5 +1,8 @@
 import { Route, Routes } from 'react-router-dom'
 import Home from './pages/Home'
+import Scan from './pages/Scan'
+import Analyzing from './pages/Analyzing'
+import Diagnosis from './pages/Diagnosis'
 import DiagnoseTest from './pages/DiagnoseTest'
 
 function ComingSoon({ label }: { label: string }) {
@@ -18,9 +21,9 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/diagnose-test" element={<DiagnoseTest />} />
-      <Route path="/scan" element={<ComingSoon label="Scan Your Router" />} />
-      <Route path="/analyzing" element={<ComingSoon label="Analyzing" />} />
-      <Route path="/diagnosis" element={<ComingSoon label="Diagnosis" />} />
+      <Route path="/scan" element={<Scan />} />
+      <Route path="/analyzing" element={<Analyzing />} />
+      <Route path="/diagnosis" element={<Diagnosis />} />
       <Route path="/outage" element={<ComingSoon label="Service Status" />} />
       <Route path="/troubleshoot" element={<ComingSoon label="Troubleshooting" />} />
       <Route path="/verify" element={<ComingSoon label="Step Complete?" />} />

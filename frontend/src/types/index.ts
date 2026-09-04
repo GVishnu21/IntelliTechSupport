@@ -18,6 +18,7 @@ export interface RouterDiagnosis {
   issue: string
   lowConfidence: boolean
   lights: LedReading[]
+  firstStep: TroubleshootingStep | null
 }
 
 export interface TroubleshootingStep {

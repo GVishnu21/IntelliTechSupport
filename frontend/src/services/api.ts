@@ -77,6 +77,7 @@ function toDiagnosis(res: BackendDiagnosisResponse): RouterDiagnosis {
     issue: deriveIssueMessage(res.status_lights),
     lowConfidence: res.low_confidence,
     lights: parseLedReadings(res.status_lights),
+    firstStep: toStep(res.next_step),
   }
 }
 
