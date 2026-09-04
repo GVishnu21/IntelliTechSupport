@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Home from './pages/Home'
+import DiagnoseTest from './pages/DiagnoseTest'
 
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -16,6 +17,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/diagnose-test" element={<DiagnoseTest />} />
       <Route path="/scan" element={<ComingSoon label="Scan Your Router" />} />
       <Route path="/analyzing" element={<ComingSoon label="Analyzing" />} />
       <Route path="/diagnosis" element={<ComingSoon label="Diagnosis" />} />
