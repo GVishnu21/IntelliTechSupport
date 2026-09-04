@@ -1,5 +1,6 @@
-import type { DetectionConfidence, RouterDiagnosis, TroubleshootingStep, VerifyResult } from '../types'
+import type { DetectionConfidence, OutageInfo, RouterDiagnosis, TroubleshootingStep, VerifyResult } from '../types'
 import { parseLedReadings } from '../utils/led'
+import { MOCK_OUTAGE } from '../data/mockData'
 
 interface BackendStepInfo {
   instruction: string
@@ -117,4 +118,9 @@ export async function verifyStepWithPhoto(sessionId: string, imageBase64: string
 export async function escalate(sessionId: string): Promise<{ ticketId: string }> {
   const res = await postJson<{ ticket_id: string }>('/escalate', { session_id: sessionId })
   return { ticketId: res.ticket_id }
+}
+
+// No backend support for outage detection yet — mock-backed.
+export async function checkOutage(): Promise<OutageInfo> {
+  return MOCK_OUTAGE
 }

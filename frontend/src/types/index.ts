@@ -35,3 +35,10 @@ export interface VerifyResult {
   escalate: boolean
   nextStep: TroubleshootingStep | null
 }
+
+export interface OutageInfo {
+  active: boolean
+  area: string
+  estimatedRestoration: string
+  message: string
+}

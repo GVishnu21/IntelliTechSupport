@@ -2,22 +2,32 @@ import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { DiagnosisCard } from '../components/diagnosis/DiagnosisCard'
+import { checkOutage } from '../services/api'
 import type { RouterDiagnosis } from '../types'
 
 interface DiagnosisLocationState {
   diagnosis?: RouterDiagnosis
+  skipOutageCheck?: boolean
 }
 
 export default function Diagnosis() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { diagnosis } = (location.state as DiagnosisLocationState) ?? {}
+  const { diagnosis, skipOutageCheck } = (location.state as DiagnosisLocationState) ?? {}
 
   useEffect(() => {
     if (!diagnosis) {
       navigate('/scan', { replace: true })
+      return
     }
-  }, [diagnosis, navigate])
+    if (skipOutageCheck) return
+
+    checkOutage().then((outage) => {
+      if (outage.active) {
+        navigate('/outage', { replace: true, state: { outage, diagnosis } })
+      }
+    })
+  }, [diagnosis, skipOutageCheck, navigate])
 
   if (!diagnosis) {
     return null
