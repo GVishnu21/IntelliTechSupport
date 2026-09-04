@@ -1,14 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAnalytics } from '../../services/api'
+import { TrendLineChart } from '../../components/admin/TrendLineChart'
+import { CategoryBarChart } from '../../components/admin/CategoryBarChart'
+import { DateRangeFilter, type DateRangeOption } from '../../components/admin/DateRangeFilter'
+import { filterTrend } from '../../utils/trend'
 import type { AnalyticsSummary } from '../../types'
 
 export default function AdminAnalytics() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
+  const [range, setRange] = useState<DateRangeOption>('30d')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
 
   useEffect(() => {
     getAnalytics().then(setAnalytics)
   }, [])
+
+  const resolutionTrend = useMemo(
+    () => (analytics ? filterTrend(analytics.resolutionTrend, range, customStart, customEnd) : []),
+    [analytics, range, customStart, customEnd]
+  )
+  const escalationTrend = useMemo(
+    () => (analytics ? filterTrend(analytics.escalationTrend, range, customStart, customEnd) : []),
+    [analytics, range, customStart, customEnd]
+  )
 
   if (!analytics) {
     return <p className="p-8 text-text-secondary">Loading…</p>
@@ -32,7 +48,7 @@ export default function AdminAnalytics() {
         </Link>
       </header>
 
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
         {stats.map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <p className="text-sm text-text-secondary">{label}</p>
@@ -41,30 +57,23 @@ export default function AdminAnalytics() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <h3 className="mb-2 text-lg font-bold text-text">Common router problems</h3>
-          <ul className="space-y-2">
-            {analytics.commonIssues.map((issue) => (
-              <li key={issue.label} className="flex items-center justify-between text-base text-text">
-                <span>{issue.label}</span>
-                <span className="font-medium">{issue.count}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="mb-4">
+        <DateRangeFilter
+          value={range}
+          onChange={setRange}
+          customStart={customStart}
+          customEnd={customEnd}
+          onCustomStartChange={setCustomStart}
+          onCustomEndChange={setCustomEnd}
+        />
+      </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <h3 className="mb-2 text-lg font-bold text-text">Most scanned router models</h3>
-          <ul className="space-y-2">
-            {analytics.commonRouterModels.map((model) => (
-              <li key={model.label} className="flex items-center justify-between text-base text-text">
-                <span>{model.label}</span>
-                <span className="font-medium">{model.count}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <TrendLineChart title="Resolution trend" data={resolutionTrend} color="#16A34A" />
+        <TrendLineChart title="Escalation trend" data={escalationTrend} color="#D97706" />
+        <CategoryBarChart title="Common router problems" data={analytics.commonIssues} />
+        <CategoryBarChart title="Most common LED patterns" data={analytics.commonLedPatterns} />
+        <CategoryBarChart title="Most successful troubleshooting steps" data={analytics.topTroubleshootingSteps} />
       </div>
     </div>
   )

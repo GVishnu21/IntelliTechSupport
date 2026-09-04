@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import Home from './pages/Home'
 import Scan from './pages/Scan'
@@ -9,10 +10,17 @@ import Verify from './pages/Verify'
 import Success from './pages/Success'
 import Escalate from './pages/Escalate'
 import SelectRouter from './pages/SelectRouter'
-import AdminDashboard from './pages/admin/Dashboard'
-import AdminTickets from './pages/admin/Tickets'
-import AdminTicketDetails from './pages/admin/TicketDetails'
-import AdminAnalytics from './pages/admin/Analytics'
+
+// Code-split: only the admin pages pull in Recharts. Lazy-loading them keeps
+// that weight out of the customer-facing bundle, which is the actual demo path.
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'))
+const AdminTickets = lazy(() => import('./pages/admin/Tickets'))
+const AdminTicketDetails = lazy(() => import('./pages/admin/TicketDetails'))
+const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'))
+
+function AdminFallback() {
+  return <p className="p-8 text-text-secondary">Loading…</p>
+}
 
 export default function App() {
   return (
@@ -27,10 +35,38 @@ export default function App() {
       <Route path="/success" element={<Success />} />
       <Route path="/escalate" element={<Escalate />} />
       <Route path="/select-router" element={<SelectRouter />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/admin/tickets" element={<AdminTickets />} />
-      <Route path="/admin/tickets/:id" element={<AdminTicketDetails />} />
-      <Route path="/admin/analytics" element={<AdminAnalytics />} />
+      <Route
+        path="/admin"
+        element={
+          <Suspense fallback={<AdminFallback />}>
+            <AdminDashboard />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/admin/tickets"
+        element={
+          <Suspense fallback={<AdminFallback />}>
+            <AdminTickets />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/admin/tickets/:id"
+        element={
+          <Suspense fallback={<AdminFallback />}>
+            <AdminTicketDetails />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <Suspense fallback={<AdminFallback />}>
+            <AdminAnalytics />
+          </Suspense>
+        }
+      />
     </Routes>
   )
 }

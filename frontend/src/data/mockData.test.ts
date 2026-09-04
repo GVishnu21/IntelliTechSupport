@@ -47,8 +47,29 @@ describe('MOCK_ANALYTICS', () => {
     expect(MOCK_ANALYTICS.escalationRate).toBeLessThanOrEqual(1)
   })
 
-  it('has non-empty trend series', () => {
-    expect(MOCK_ANALYTICS.resolutionTrend.length).toBeGreaterThan(0)
-    expect(MOCK_ANALYTICS.escalationTrend.length).toBeGreaterThan(0)
+  it('has 90 days of trend data for the date-range filter to slice into', () => {
+    expect(MOCK_ANALYTICS.resolutionTrend).toHaveLength(90)
+    expect(MOCK_ANALYTICS.escalationTrend).toHaveLength(90)
+  })
+
+  it('trend values stay within 0 and 1', () => {
+    for (const point of [...MOCK_ANALYTICS.resolutionTrend, ...MOCK_ANALYTICS.escalationTrend]) {
+      expect(point.value).toBeGreaterThanOrEqual(0)
+      expect(point.value).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('trend dates are in chronological order ending at the anchor date', () => {
+    const dates = MOCK_ANALYTICS.resolutionTrend.map((p) => p.date)
+    const sorted = [...dates].sort()
+    expect(dates).toEqual(sorted)
+    expect(dates[dates.length - 1]).toBe('2026-09-04')
+  })
+
+  it('has non-empty breakdown lists', () => {
+    expect(MOCK_ANALYTICS.commonIssues.length).toBeGreaterThan(0)
+    expect(MOCK_ANALYTICS.commonRouterModels.length).toBeGreaterThan(0)
+    expect(MOCK_ANALYTICS.commonLedPatterns.length).toBeGreaterThan(0)
+    expect(MOCK_ANALYTICS.topTroubleshootingSteps.length).toBeGreaterThan(0)
   })
 })

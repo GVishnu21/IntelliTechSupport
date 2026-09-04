@@ -1,4 +1,20 @@
-import type { AnalyticsSummary, OutageInfo, RouterCatalogEntry, RouterDiagnosis, SupportTicket } from '../types'
+import type { AnalyticsSummary, OutageInfo, RouterCatalogEntry, RouterDiagnosis, SupportTicket, TrendPoint } from '../types'
+
+const ANALYTICS_ANCHOR_DATE = '2026-09-04T00:00:00Z'
+
+// Deterministic (no Math.random) so the numbers are stable across runs/tests
+// while still varying enough to look like a real trend line when plotted.
+function generateTrend(days: number, base: number, amplitude: number): TrendPoint[] {
+  const anchor = new Date(ANALYTICS_ANCHOR_DATE)
+  const points: TrendPoint[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(anchor)
+    date.setUTCDate(date.getUTCDate() - i)
+    const value = Math.min(1, Math.max(0, base + Math.sin(i / 5) * amplitude))
+    points.push({ date: date.toISOString().slice(0, 10), value: Number(value.toFixed(2)) })
+  }
+  return points
+}
 
 export const MOCK_OUTAGE: OutageInfo = {
   active: false,
@@ -103,24 +119,10 @@ export const MOCK_ANALYTICS: AnalyticsSummary = {
   firstContactResolution: 0.68,
   repeatContactRate: 0.09,
   csat: 4.4,
-  resolutionTrend: [
-    { date: '2026-08-29', value: 0.65 },
-    { date: '2026-08-30', value: 0.68 },
-    { date: '2026-08-31', value: 0.7 },
-    { date: '2026-09-01', value: 0.69 },
-    { date: '2026-09-02', value: 0.71 },
-    { date: '2026-09-03', value: 0.73 },
-    { date: '2026-09-04', value: 0.72 },
-  ],
-  escalationTrend: [
-    { date: '2026-08-29', value: 0.22 },
-    { date: '2026-08-30', value: 0.2 },
-    { date: '2026-08-31', value: 0.19 },
-    { date: '2026-09-01', value: 0.21 },
-    { date: '2026-09-02', value: 0.18 },
-    { date: '2026-09-03', value: 0.17 },
-    { date: '2026-09-04', value: 0.18 },
-  ],
+  // 90 days generated so the Analytics date filter (7/30/90) has real data to
+  // slice into, rather than a filter control that can't actually change anything.
+  resolutionTrend: generateTrend(90, 0.72, 0.06),
+  escalationTrend: generateTrend(90, 0.18, 0.04),
   commonIssues: [
     { label: 'LOS / Fiber signal', count: 412 },
     { label: 'Internet disconnected', count: 298 },
@@ -132,5 +134,17 @@ export const MOCK_ANALYTICS: AnalyticsSummary = {
     { label: 'Huawei HG8145V5', count: 241 },
     { label: 'TP-Link Archer C6', count: 189 },
     { label: 'Netgear Nighthawk R7000', count: 122 },
+  ],
+  commonLedPatterns: [
+    { label: 'LOS blinking red', count: 356 },
+    { label: 'Internet light off', count: 241 },
+    { label: 'Wi-Fi light off', count: 158 },
+    { label: 'Power light off', count: 62 },
+  ],
+  topTroubleshootingSteps: [
+    { label: 'Restart the router', count: 812 },
+    { label: 'Check the cable connection', count: 341 },
+    { label: 'Wait two minutes and recheck', count: 178 },
+    { label: 'Reset Wi-Fi', count: 94 },
   ],
 }

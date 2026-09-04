@@ -91,4 +91,6 @@ export interface AnalyticsSummary {
   escalationTrend: TrendPoint[]
   commonIssues: LabeledCount[]
   commonRouterModels: LabeledCount[]
+  commonLedPatterns: LabeledCount[]
+  topTroubleshootingSteps: LabeledCount[]
 }
