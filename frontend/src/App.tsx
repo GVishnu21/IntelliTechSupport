@@ -8,6 +8,10 @@ import Troubleshoot from './pages/Troubleshoot'
 import Verify from './pages/Verify'
 import Success from './pages/Success'
 import Escalate from './pages/Escalate'
+import AdminDashboard from './pages/admin/Dashboard'
+import AdminTickets from './pages/admin/Tickets'
+import AdminTicketDetails from './pages/admin/TicketDetails'
+import AdminAnalytics from './pages/admin/Analytics'
 import DiagnoseTest from './pages/DiagnoseTest'
 
 function ComingSoon({ label }: { label: string }) {
@@ -35,10 +39,10 @@ export default function App() {
       <Route path="/success" element={<Success />} />
       <Route path="/escalate" element={<Escalate />} />
       <Route path="/select-router" element={<ComingSoon label="Select Your Router" />} />
-      <Route path="/admin" element={<ComingSoon label="Admin Dashboard" />} />
-      <Route path="/admin/tickets" element={<ComingSoon label="Support Tickets" />} />
-      <Route path="/admin/tickets/:id" element={<ComingSoon label="Ticket Details" />} />
-      <Route path="/admin/analytics" element={<ComingSoon label="Analytics" />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/tickets" element={<AdminTickets />} />
+      <Route path="/admin/tickets/:id" element={<AdminTicketDetails />} />
+      <Route path="/admin/analytics" element={<AdminAnalytics />} />
     </Routes>
   )
 }

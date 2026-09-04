@@ -1,6 +1,15 @@
-import type { DetectionConfidence, OutageInfo, RouterDiagnosis, TroubleshootingStep, VerifyResult } from '../types'
+import type {
+  AnalyticsSummary,
+  DetectionConfidence,
+  OutageInfo,
+  RouterCatalogEntry,
+  RouterDiagnosis,
+  SupportTicket,
+  TroubleshootingStep,
+  VerifyResult,
+} from '../types'
 import { parseLedReadings } from '../utils/led'
-import { MOCK_OUTAGE } from '../data/mockData'
+import { MOCK_ANALYTICS, MOCK_OUTAGE, MOCK_TICKETS, ROUTER_CATALOG } from '../data/mockData'
 
 interface BackendStepInfo {
   instruction: string
@@ -120,7 +129,25 @@ export async function escalate(sessionId: string): Promise<{ ticketId: string }>
   return { ticketId: res.ticket_id }
 }
 
-// No backend support for outage detection yet — mock-backed.
+// No backend support for outages, the router catalog, or the admin surface
+// yet — the following are all mock-backed.
+
 export async function checkOutage(): Promise<OutageInfo> {
   return MOCK_OUTAGE
+}
+
+export function getRouterCatalog(): RouterCatalogEntry[] {
+  return ROUTER_CATALOG
+}
+
+export async function getTickets(): Promise<SupportTicket[]> {
+  return MOCK_TICKETS
+}
+
+export async function getTicket(id: string): Promise<SupportTicket | undefined> {
+  return MOCK_TICKETS.find((ticket) => ticket.id === id)
+}
+
+export async function getAnalytics(): Promise<AnalyticsSummary> {
+  return MOCK_ANALYTICS
 }
