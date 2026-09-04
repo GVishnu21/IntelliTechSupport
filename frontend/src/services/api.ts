@@ -9,7 +9,7 @@ import type {
   VerifyResult,
 } from '../types'
 import { parseLedReadings } from '../utils/led'
-import { MOCK_ANALYTICS, MOCK_OUTAGE, MOCK_TICKETS, ROUTER_CATALOG } from '../data/mockData'
+import { MOCK_ANALYTICS, MOCK_OUTAGE, MOCK_TICKETS, ROUTER_CATALOG, mockDiagnosisForRouter } from '../data/mockData'
 
 interface BackendStepInfo {
   instruction: string
@@ -138,6 +138,10 @@ export async function checkOutage(): Promise<OutageInfo> {
 
 export function getRouterCatalog(): RouterCatalogEntry[] {
   return ROUTER_CATALOG
+}
+
+export function getMockDiagnosis(entry: RouterCatalogEntry): RouterDiagnosis {
+  return mockDiagnosisForRouter(entry)
 }
 
 export async function getTickets(): Promise<SupportTicket[]> {

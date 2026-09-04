@@ -1,4 +1,4 @@
-import type { AnalyticsSummary, OutageInfo, RouterCatalogEntry, SupportTicket } from '../types'
+import type { AnalyticsSummary, OutageInfo, RouterCatalogEntry, RouterDiagnosis, SupportTicket } from '../types'
 
 export const MOCK_OUTAGE: OutageInfo = {
   active: false,
@@ -15,6 +15,34 @@ export const ROUTER_CATALOG: RouterCatalogEntry[] = [
   { id: 'other-arris-sb8200', provider: 'Other', brand: 'Arris', model: 'SB8200' },
   { id: 'other-netgear-r7000', provider: 'Other', brand: 'Netgear', model: 'Nighthawk R7000' },
 ]
+
+// Used by the manual router-selection fallback (spec section 22), when there
+// is no photo to run through the real vision pipeline. The resulting
+// sessionId is not a real backend session — if the customer proceeds through
+// Troubleshoot to Verify, the real /verify-step endpoint won't recognize it
+// and will correctly escalate rather than fake a resolution.
+export function mockDiagnosisForRouter(entry: RouterCatalogEntry): RouterDiagnosis {
+  return {
+    sessionId: `manual-${entry.id}-${Date.now()}`,
+    manufacturer: entry.brand,
+    model: entry.model,
+    confidence: 'high',
+    issue: "We're not receiving a fiber signal.",
+    lowConfidence: false,
+    lights: [
+      { name: 'Power', color: 'green', state: 'solid' },
+      { name: 'Internet', color: 'red', state: 'off' },
+      { name: 'Wi-Fi', color: 'green', state: 'solid' },
+    ],
+    firstStep: {
+      stepNumber: 1,
+      totalSteps: 3,
+      title: 'Step 1',
+      description: "Unplug the router's power cable, wait 10 seconds, then plug it back in.",
+      checklist: [],
+    },
+  }
+}
 
 export const MOCK_TICKETS: SupportTicket[] = [
   {

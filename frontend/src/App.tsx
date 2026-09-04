@@ -8,21 +8,11 @@ import Troubleshoot from './pages/Troubleshoot'
 import Verify from './pages/Verify'
 import Success from './pages/Success'
 import Escalate from './pages/Escalate'
+import SelectRouter from './pages/SelectRouter'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminTickets from './pages/admin/Tickets'
 import AdminTicketDetails from './pages/admin/TicketDetails'
 import AdminAnalytics from './pages/admin/Analytics'
-
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div className="flex min-h-dvh items-center justify-center p-8 text-center">
-      <div>
-        <h1 className="text-xl font-bold text-text">{label}</h1>
-        <p className="text-text-secondary">Coming soon.</p>
-      </div>
-    </div>
-  )
-}
 
 export default function App() {
   return (
@@ -36,7 +26,7 @@ export default function App() {
       <Route path="/verify" element={<Verify />} />
       <Route path="/success" element={<Success />} />
       <Route path="/escalate" element={<Escalate />} />
-      <Route path="/select-router" element={<ComingSoon label="Select Your Router" />} />
+      <Route path="/select-router" element={<SelectRouter />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/tickets" element={<AdminTickets />} />
       <Route path="/admin/tickets/:id" element={<AdminTicketDetails />} />
