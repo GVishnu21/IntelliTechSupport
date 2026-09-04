@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { CustomerLayout } from '../components/layout/CustomerLayout'
 import { DiagnosisCard } from '../components/diagnosis/DiagnosisCard'
 import { checkOutage } from '../services/api'
 import type { RouterDiagnosis } from '../types'
@@ -56,19 +56,7 @@ export default function Diagnosis() {
 
   if (diagnosis.lowConfidence) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 py-4">
-        <header className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Go back"
-            onClick={() => navigate(-1)}
-            className="flex min-h-11 min-w-11 items-center justify-center"
-          >
-            <ChevronLeft size={24} className="text-text" />
-          </button>
-          <h1 className="text-base font-bold text-text">Diagnosis</h1>
-        </header>
-
+      <CustomerLayout title="Diagnosis" showBack>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
           <h2 className="text-[28px] font-bold leading-8 text-text">We couldn't identify the router</h2>
           <p className="text-base leading-6 text-text-secondary">
@@ -93,27 +81,17 @@ export default function Diagnosis() {
             Select router manually
           </button>
         </div>
-      </div>
+      </CustomerLayout>
     )
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 py-4">
-      <header className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Go back"
-          onClick={() => navigate(-1)}
-          className="flex min-h-11 min-w-11 items-center justify-center"
-        >
-          <ChevronLeft size={24} className="text-text" />
-        </button>
-        <h1 className="text-base font-bold text-text">Diagnosis</h1>
-      </header>
-
+    <CustomerLayout title="Diagnosis" showBack>
       <h2 className="text-[28px] font-bold leading-8 text-text">Here's what we found</h2>
 
-      <DiagnosisCard diagnosis={diagnosis} />
+      <div className="mt-4 flex-1">
+        <DiagnosisCard diagnosis={diagnosis} />
+      </div>
 
       <div className="mt-auto space-y-3 pt-4">
         {diagnosis.firstStep ? (
@@ -141,6 +119,6 @@ export default function Diagnosis() {
           Not your router? Select router manually
         </button>
       </div>
-    </div>
+    </CustomerLayout>
   )
 }

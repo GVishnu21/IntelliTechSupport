@@ -1,20 +1,16 @@
 import { Link } from 'react-router-dom'
 import { CircleHelp, Router } from 'lucide-react'
+import { CustomerLayout } from '../components/layout/CustomerLayout'
 
 export default function Home() {
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col gap-8 px-5 py-6">
-      <header className="flex items-center justify-between">
-        <span className="text-lg font-bold text-text">Intelli TechSupport</span>
-        <button
-          type="button"
-          aria-label="Help"
-          className="flex min-h-11 min-w-11 items-center justify-center"
-        >
+    <CustomerLayout
+      rightAction={
+        <button type="button" aria-label="Help" className="flex min-h-11 min-w-11 items-center justify-center">
           <CircleHelp size={22} className="text-text-secondary" />
         </button>
-      </header>
-
+      }
+    >
       <div className="flex flex-1 flex-col items-center justify-center gap-8 text-center">
         <div
           role="img"
@@ -25,7 +21,7 @@ export default function Home() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-[28px] font-bold leading-8 text-text">Is your internet not working?</h1>
+          <h2 className="text-[28px] font-bold leading-8 text-text">Is your internet not working?</h2>
           <p className="text-base leading-6 text-text-secondary">
             Let's check your router and help you get back online.
           </p>
@@ -61,6 +57,6 @@ export default function Home() {
           </button>
         </div>
       </div>
-    </div>
+    </CustomerLayout>
   )
 }

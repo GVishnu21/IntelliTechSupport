@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TriangleAlert } from 'lucide-react'
+import { CustomerLayout } from '../components/layout/CustomerLayout'
 import type { OutageInfo, RouterDiagnosis } from '../types'
 
 interface OutageLocationState {
@@ -21,11 +22,7 @@ export default function Outage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-4 py-6">
-      <header className="text-center">
-        <h1 className="text-base font-bold text-text">Service Status</h1>
-      </header>
-
+    <CustomerLayout title="Service Status">
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-card">
           <TriangleAlert size={32} className="text-warning" aria-hidden="true" />
@@ -36,18 +33,18 @@ export default function Outage() {
         </p>
       </div>
 
-      <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="mt-6 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <p className="text-base font-bold text-text">Service interruption</p>
         <p className="text-sm text-text-secondary">Estimated restoration</p>
         <p className="text-lg font-semibold text-text">{outage?.estimatedRestoration ?? '—'}</p>
         <p className="text-sm text-text-secondary">Location: {outage?.area ?? 'Your area'}</p>
       </div>
 
-      <p className="text-center text-base text-text">
+      <p className="mt-6 text-center text-base text-text">
         You don't need to troubleshoot your router right now.
       </p>
 
-      <div className="mt-auto space-y-3">
+      <div className="mt-auto space-y-3 pt-4">
         <button
           type="button"
           className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
@@ -62,6 +59,6 @@ export default function Outage() {
           Try Troubleshooting Anyway
         </button>
       </div>
-    </div>
+    </CustomerLayout>
   )
 }

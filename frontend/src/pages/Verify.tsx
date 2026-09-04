@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import CameraCapture from '../components/CameraCapture'
+import { CustomerLayout } from '../components/layout/CustomerLayout'
 import { verifyStepWithPhoto } from '../services/api'
 import type { TroubleshootingStep } from '../types'
 
@@ -60,23 +61,21 @@ export default function Verify() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 py-4">
-      <header className="text-center">
-        <h1 className="text-base font-bold text-text">Step complete?</h1>
-      </header>
+    <CustomerLayout title="Step complete?" focused>
+      <div className="flex flex-1 flex-col gap-4">
+        <div className="space-y-1 text-center">
+          <h2 className="text-[28px] font-bold leading-8 text-text">Did this fix your internet?</h2>
+          <p className="text-base leading-6 text-text-secondary">Check your router lights and connection.</p>
+        </div>
 
-      <div className="space-y-1 text-center">
-        <h2 className="text-[28px] font-bold leading-8 text-text">Did this fix your internet?</h2>
-        <p className="text-base leading-6 text-text-secondary">Check your router lights and connection.</p>
+        {error && <p className="text-center text-error">{error}</p>}
+
+        <CameraCapture
+          busy={busy}
+          prompt="Take another photo so we can check it worked"
+          onCapture={handleCapture}
+        />
       </div>
-
-      {error && <p className="text-center text-error">{error}</p>}
-
-      <CameraCapture
-        busy={busy}
-        prompt="Take another photo so we can check it worked"
-        onCapture={handleCapture}
-      />
-    </div>
+    </CustomerLayout>
   )
 }
