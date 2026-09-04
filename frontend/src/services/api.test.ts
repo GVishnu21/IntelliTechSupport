@@ -124,6 +124,33 @@ describe('verifyStepWithPhoto', () => {
       checklist: [],
     })
   })
+
+  it('passes through checklist and note when the backend provides them', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          resolved: false,
+          escalate: false,
+          next_step: {
+            instruction: 'Check the cable.',
+            step_number: 2,
+            checklist: ['Cable is connected to the correct port', 'Cable is firmly connected'],
+            note: "Don't bend the fiber cable sharply.",
+          },
+          status_lights: {},
+        }),
+      })
+    )
+
+    const result = await verifyStepWithPhoto('session-1', 'img')
+    expect(result.nextStep?.checklist).toEqual([
+      'Cable is connected to the correct port',
+      'Cable is firmly connected',
+    ])
+    expect(result.nextStep?.note).toBe("Don't bend the fiber cable sharply.")
+  })
 })
 
 describe('escalate', () => {

@@ -14,6 +14,8 @@ import { MOCK_ANALYTICS, MOCK_OUTAGE, MOCK_TICKETS, ROUTER_CATALOG, mockDiagnosi
 interface BackendStepInfo {
   instruction: string
   step_number: number
+  checklist?: string[]
+  note?: string | null
 }
 
 interface BackendDiagnosisResponse {
@@ -77,7 +79,8 @@ function toStep(step: BackendStepInfo | null): TroubleshootingStep | null {
     totalSteps: Math.max(step.step_number, 3),
     title: `Step ${step.step_number}`,
     description: step.instruction,
-    checklist: [],
+    checklist: step.checklist ?? [],
+    note: step.note ?? undefined,
   }
 }
 

@@ -13,7 +13,7 @@ _SESSIONS: dict[str, "Session"] = {}
 class Session:
     equipment: str
     fault_light: str
-    steps: list[str]
+    steps: list[dict]
     step_index: int = 0
     resolved: bool = False
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -23,7 +23,7 @@ def _is_healthy(reading: VisionReading, fault_light: str) -> bool:
     return reading.status_lights.get(fault_light) == HEALTHY_STATE
 
 
-def start_session(reading: VisionReading) -> tuple[Session, str | None]:
+def start_session(reading: VisionReading) -> tuple[Session, dict | None]:
     """Create a session from an initial reading. Returns (session, first_step)."""
     spec = EQUIPMENT_CATALOG[reading.equipment]
     session = Session(
@@ -41,7 +41,7 @@ def start_session(reading: VisionReading) -> tuple[Session, str | None]:
     return session, session.steps[0]
 
 
-def verify_step(session_id: str, reading: VisionReading) -> tuple[bool, bool, str | None]:
+def verify_step(session_id: str, reading: VisionReading) -> tuple[bool, bool, dict | None]:
     """Returns (resolved, escalate, next_step_instruction)."""
     session = _SESSIONS.get(session_id)
     if session is None:

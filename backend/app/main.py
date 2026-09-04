@@ -48,7 +48,16 @@ def diagnose(payload: ImageRequest) -> DiagnosisResponse:
         )
 
     session, first_step = start_session(reading)
-    next_step = StepInfo(instruction=first_step, step_number=1) if first_step else None
+    next_step = (
+        StepInfo(
+            instruction=first_step["instruction"],
+            step_number=1,
+            checklist=first_step.get("checklist", []),
+            note=first_step.get("note"),
+        )
+        if first_step
+        else None
+    )
 
     return DiagnosisResponse(
         session_id=session.id,
@@ -68,10 +77,19 @@ def verify(payload: ImageRequest) -> VerifyStepResponse:
     engine = get_vision_engine()
     reading = engine.interpret(payload.image_base64)
 
-    resolved, should_escalate, next_instruction = verify_step(payload.session_id, reading)
+    resolved, should_escalate, next_step_data = verify_step(payload.session_id, reading)
     session = get_session(payload.session_id)
-    step_number = (session.step_index + 1) if (session and next_instruction) else 0
-    next_step = StepInfo(instruction=next_instruction, step_number=step_number) if next_instruction else None
+    step_number = (session.step_index + 1) if (session and next_step_data) else 0
+    next_step = (
+        StepInfo(
+            instruction=next_step_data["instruction"],
+            step_number=step_number,
+            checklist=next_step_data.get("checklist", []),
+            note=next_step_data.get("note"),
+        )
+        if next_step_data
+        else None
+    )
 
     return VerifyStepResponse(
         resolved=resolved,
