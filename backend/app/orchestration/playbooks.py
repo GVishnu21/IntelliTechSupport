@@ -24,6 +24,15 @@ EQUIPMENT_CATALOG: dict[str, dict] = {
             "Press and hold the Wi-Fi reset button on the back of the router for 5 seconds.",
         ],
     },
+    "TP-Link Archer C6": {
+        "lights": ["power", "wifi", "internet"],
+        "fault_light": "internet",
+        "steps": [
+            "Unplug the router's power cable, wait 10 seconds, then plug it back in.",
+            "Check that the cable from your modem/ONT is firmly connected to the router's blue Internet/WAN port.",
+            "Restart your modem or ONT as well, then wait two minutes.",
+        ],
+    },
     # Catch-all for any router/modem that isn't one of the two named SKUs
     # above. The vision prompt is instructed to normalize whatever the
     # device's own internet/online light is called into a single "internet"

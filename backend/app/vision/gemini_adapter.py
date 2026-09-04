@@ -33,11 +33,19 @@ Rules for the "equipment" field:
 
 Rules for the "status_lights" field:
 - For a named model, use that model's own light names (as listed above).
-- For "Generic Router/Modem", always include a key called "internet" whose value
-  reflects whichever single light indicates internet/online connectivity status,
-  regardless of what label is printed on the device itself (e.g. "Internet",
-  "Online", "WAN", a globe icon). Use one of: "solid_green", "blinking_amber",
-  "blinking_red", "solid_red", "off".
+- For "Generic Router/Modem", report EVERY individual status light you can
+  distinguish on the device — don't collapse them into one. Use these
+  normalized keys where they apply: "power" (power/on light), "wifi"
+  (Wi-Fi/wireless light, combine 2.4GHz+5GHz into one entry if both are
+  present), "internet" (the light for internet/WAN/online connectivity —
+  look for labels like "Internet", "Online", "WAN", or a globe icon), "lan"
+  (wired LAN/Ethernet port lights, combined into one entry if there are
+  several), "security" (WPS/security/lock icon). Use "other" for any other
+  clearly visible light that doesn't fit those categories. Always include
+  "internet" — if the device has no light specifically labeled for internet
+  status, use whichever single light best represents overall connectivity.
+  Use one of: "solid_green", "blinking_amber", "blinking_red", "solid_red",
+  "off" for each value.
 
 Respond with ONLY a JSON object, no markdown fences, in exactly this shape:
 {{"equipment": "<name, Generic Router/Modem, or unknown>", "confidence": <0.0-1.0>, "status_lights": {{"<light>": "<state>"}}}}

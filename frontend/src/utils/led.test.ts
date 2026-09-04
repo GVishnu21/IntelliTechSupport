@@ -53,6 +53,8 @@ describe('ledDisplayName', () => {
     expect(ledDisplayName('internet')).toBe('Internet')
     expect(ledDisplayName('online')).toBe('Internet')
     expect(ledDisplayName('wifi')).toBe('Wi-Fi')
+    expect(ledDisplayName('lan')).toBe('LAN')
+    expect(ledDisplayName('security')).toBe('Security')
   })
 
   it('capitalizes unknown keys as a fallback', () => {

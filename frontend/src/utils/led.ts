@@ -41,6 +41,9 @@ const LIGHT_DISPLAY_NAMES: Record<string, string> = {
   downstream: 'Signal',
   wifi: 'Wi-Fi',
   los: 'LOS',
+  lan: 'LAN',
+  security: 'Security',
+  other: 'Other',
 }
 
 export function ledDisplayName(key: string): string {
