@@ -1,6 +1,7 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CameraCapture from '../components/CameraCapture'
+import { PhotoUploadButton } from '../components/PhotoUploadButton'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
 import { Button } from '../components/ui/Button'
 import { SecondaryButton } from '../components/ui/SecondaryButton'
@@ -9,7 +10,6 @@ type ScanPhase = 'capture' | 'review' | 'permission-error'
 
 export default function Scan() {
   const navigate = useNavigate()
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [phase, setPhase] = useState<ScanPhase>('capture')
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
@@ -29,24 +29,9 @@ export default function Scan() {
     setPhase('capture')
   }
 
-  function handleUploadClick() {
-    fileInputRef.current?.click()
-  }
-
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      const base64 = result.split(',')[1]
-      if (base64) {
-        setCapturedImage(base64)
-        setPhase('review')
-      }
-    }
-    reader.readAsDataURL(file)
-    event.target.value = ''
+  function handlePhotoUpload(base64: string) {
+    setCapturedImage(base64)
+    setPhase('review')
   }
 
   function handleRetake() {
@@ -63,14 +48,6 @@ export default function Scan() {
   return (
     <CustomerLayout title="Scan Your Router" showBack focused>
       <div className="flex flex-1 flex-col gap-4">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={handleFileChange}
-      />
-
       {phase === 'permission-error' && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <h2 className="text-[28px] font-bold leading-8 text-text">Camera access is needed</h2>
@@ -79,13 +56,12 @@ export default function Scan() {
           </p>
           <div className="w-full max-w-xs space-y-3">
             <Button onClick={handleRetryCamera}>Enable Camera</Button>
-            <button
-              type="button"
-              onClick={handleUploadClick}
+            <PhotoUploadButton
+              onUpload={handlePhotoUpload}
               className="mx-auto block min-h-11 text-sm font-medium text-text-secondary underline"
             >
               Upload a photo instead
-            </button>
+            </PhotoUploadButton>
           </div>
         </div>
       )}
@@ -113,13 +89,12 @@ export default function Scan() {
             <li>Reduce glare if possible</li>
           </ul>
 
-          <button
-            type="button"
-            onClick={handleUploadClick}
+          <PhotoUploadButton
+            onUpload={handlePhotoUpload}
             className="mx-auto block min-h-11 text-sm font-medium text-primary underline"
           >
             Upload Photo
-          </button>
+          </PhotoUploadButton>
         </>
       )}
 
