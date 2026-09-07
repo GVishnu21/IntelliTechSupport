@@ -31,6 +31,11 @@ Runs against the mock vision engine by default. To exercise the real Gemini pipe
 https://aistudio.google.com). `USE_MOCK_VISION` in `app/config.py` is derived automatically from
 whether that key is set — there's no separate flag to flip.
 
+Escalated tickets need `DATABASE_URL` set in `backend/.env` (any Postgres — this project uses
+Neon). `init_db()` runs at import time in `main.py` and creates the `tickets` table if it doesn't
+exist, so there's no separate migration step. If the password has special characters, they must
+be percent-encoded (`@` → `%40`) or the connection string parses wrong.
+
 **Frontend** (from `frontend/`):
 ```
 npm run dev              # dev server (Vite + basicSsl plugin -> serves HTTPS)
@@ -76,23 +81,33 @@ the orchestration logic both pick it up automatically. Sessions are in-memory (`
 backend doesn't recognize (e.g. one the frontend fabricated for a non-photo flow) causes
 `verify_step` to escalate immediately rather than error.
 
-`app/main.py` exposes exactly three stateful endpoints (`/diagnose`, `/verify-step`, `/escalate`)
-plus `/health`. `/escalate` is a stub — it logs the structured payload instead of forwarding to a
-real care-agent system.
+`app/main.py` exposes `/diagnose`, `/verify-step`, `/escalate`, `/tickets`, `/tickets/{id}`, plus
+`/health`. `/escalate` persists a real row to Postgres (`app/db.py`) rather than just logging —
+`Session` (in `engine.py`) now tracks `last_status_lights` and a per-step `history` list precisely
+so escalate has real data to save instead of just the equipment name. A `session_id` the backend
+doesn't recognize (e.g. one the frontend fabricated for a non-photo/manual-selection flow) still
+creates a ticket, just with `equipment="unknown"`, empty `status_lights`, and empty `history` —
+escalation is never blocked on having a real session behind it.
+
+`app/db.py` opens one connection per call rather than pooling (fine at this scale) and has no
+migration framework — `_SCHEMA` in that file is the only source of truth for the `tickets` table
+shape; edit it directly and it re-applies (idempotent `CREATE TABLE IF NOT EXISTS`) next restart.
 
 ### Frontend: one fetch boundary, route-state-driven flow, real backend + mock hybrid
 
 `frontend/src/services/api.ts` is the *only* module allowed to call `fetch`. It's split into two
 groups, commented accordingly:
-- Real backend-wired: `analyzeRouter`, `verifyStepWithPhoto`, `escalate` — these hit the actual
-  FastAPI endpoints and translate the backend's snake_case/flat response shapes into the richer
-  frontend types in `src/types/index.ts` (e.g. a raw `status_lights: {"internet": "blinking_red"}`
-  map becomes `LedReading[]` with semantic color/state via `src/utils/led.ts`, and a raw numeric
-  `confidence` becomes a bucketed `high`/`medium`/`low` — the UI never shows a raw AI confidence
-  number).
-- Mock-backed: `checkOutage`, `getRouterCatalog`, `getMockDiagnosis`, `getTickets`, `getTicket`,
-  `getAnalytics` — there's no backend support for outage detection, a router catalog, or the
-  admin surface, so these read from `src/data/mockData.ts`. When adding backend support for one of
+- Real backend-wired: `analyzeRouter`, `verifyStepWithPhoto`, `escalate`, `getTickets`, `getTicket`
+  — these hit the actual FastAPI endpoints and translate the backend's snake_case/flat response
+  shapes into the richer frontend types in `src/types/index.ts` (e.g. a raw
+  `status_lights: {"internet": "blinking_red"}` map becomes `LedReading[]` with semantic
+  color/state via `src/utils/led.ts`, and a raw numeric `confidence` becomes a bucketed
+  `high`/`medium`/`low` — the UI never shows a raw AI confidence number). Real tickets have no
+  customer identity behind them (no login exists), so `toSupportTicket()` sets
+  `customer: 'Anonymous customer'` rather than fabricating a fake name/number.
+- Mock-backed: `checkOutage`, `getRouterCatalog`, `getMockDiagnosis`, `getAnalytics` — there's no
+  backend support for outage detection, a router catalog, or the admin analytics/dashboard
+  aggregates, so these read from `src/data/mockData.ts`. When adding backend support for one of
   these later, only `api.ts` needs to change — page components never know the difference.
 
 There's no global state store. Flow state (the diagnosis, the current troubleshooting step, the

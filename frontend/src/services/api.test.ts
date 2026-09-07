@@ -180,6 +180,79 @@ describe('escalate', () => {
   })
 })
 
+describe('getTickets', () => {
+  it('maps real backend ticket rows into SupportTicket, with an honest anonymous customer', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          {
+            id: 'ITS-ABCD1234',
+            session_id: 'session-1',
+            equipment: 'Netgear Nighthawk R7000',
+            status: 'escalated',
+            status_lights: { power: 'solid_green', internet: 'blinking_red' },
+            history: [{ step: 'Restart the router', outcome: 'failed' }],
+            created_at: '2026-09-07T12:00:00Z',
+          },
+        ],
+      })
+    )
+
+    const tickets = await getTickets()
+    expect(tickets).toEqual([
+      {
+        id: 'ITS-ABCD1234',
+        customer: 'Anonymous customer',
+        issue: "We're not receiving an internet signal.",
+        router: 'Netgear Nighthawk R7000',
+        status: 'escalated',
+        createdAt: '2026-09-07T12:00:00Z',
+        ledStatus: [
+          { name: 'Power', color: 'green', state: 'solid' },
+          { name: 'Internet', color: 'red', state: 'blinking' },
+        ],
+        history: [{ step: 'Restart the router', outcome: 'failed' }],
+        aiDiagnosis: "We're not receiving an internet signal.",
+      },
+    ])
+  })
+
+  it('throws when the backend responds with an error status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
+    await expect(getTickets()).rejects.toThrow('Request failed: 500')
+  })
+})
+
+describe('getTicket', () => {
+  it('returns undefined for a 404 (ticket not found) rather than throwing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }))
+    expect(await getTicket('does-not-exist')).toBeUndefined()
+  })
+
+  it('maps a found ticket', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'ITS-ABCD1234',
+          session_id: null,
+          equipment: 'unknown',
+          status: 'escalated',
+          status_lights: {},
+          history: [],
+          created_at: '2026-09-07T12:00:00Z',
+        }),
+      })
+    )
+
+    const ticket = await getTicket('ITS-ABCD1234')
+    expect(ticket?.router).toBe('Unknown router')
+  })
+})
+
 describe('mock-backed functions', () => {
   it('checkOutage resolves the mock outage', async () => {
     const outage = await checkOutage()
@@ -188,18 +261,6 @@ describe('mock-backed functions', () => {
 
   it('getRouterCatalog returns a non-empty catalog', () => {
     expect(getRouterCatalog().length).toBeGreaterThan(0)
-  })
-
-  it('getTickets resolves the mock ticket list', async () => {
-    const tickets = await getTickets()
-    expect(tickets.length).toBeGreaterThan(0)
-  })
-
-  it('getTicket finds a ticket by id and returns undefined for unknown ids', async () => {
-    const tickets = await getTickets()
-    const found = await getTicket(tickets[0].id)
-    expect(found?.id).toBe(tickets[0].id)
-    expect(await getTicket('does-not-exist')).toBeUndefined()
   })
 
   it('getAnalytics resolves the mock analytics summary', async () => {

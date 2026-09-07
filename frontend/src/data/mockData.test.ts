@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MOCK_ANALYTICS, MOCK_OUTAGE, MOCK_TICKETS, ROUTER_CATALOG } from './mockData'
+import { MOCK_ANALYTICS, MOCK_OUTAGE, ROUTER_CATALOG } from './mockData'
 
 describe('ROUTER_CATALOG', () => {
   it('has unique ids', () => {
@@ -20,22 +20,6 @@ describe('MOCK_OUTAGE', () => {
   it('has a restoration estimate and area', () => {
     expect(MOCK_OUTAGE.estimatedRestoration).toBeTruthy()
     expect(MOCK_OUTAGE.area).toBeTruthy()
-  })
-})
-
-describe('MOCK_TICKETS', () => {
-  const validStatuses = new Set(['open', 'in_progress', 'resolved', 'escalated'])
-
-  it('every ticket has a valid status', () => {
-    for (const ticket of MOCK_TICKETS) {
-      expect(validStatuses.has(ticket.status)).toBe(true)
-    }
-  })
-
-  it('every ticket has a non-empty history', () => {
-    for (const ticket of MOCK_TICKETS) {
-      expect(ticket.history.length).toBeGreaterThan(0)
-    }
   })
 })
 

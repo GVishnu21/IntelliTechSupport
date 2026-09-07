@@ -1,4 +1,4 @@
-import type { AnalyticsSummary, OutageInfo, RouterCatalogEntry, RouterDiagnosis, SupportTicket, TrendPoint } from '../types'
+import type { AnalyticsSummary, OutageInfo, RouterCatalogEntry, RouterDiagnosis, TrendPoint } from '../types'
 
 const ANALYTICS_ANCHOR_DATE = '2026-09-04T00:00:00Z'
 
@@ -59,57 +59,6 @@ export function mockDiagnosisForRouter(entry: RouterCatalogEntry): RouterDiagnos
     },
   }
 }
-
-export const MOCK_TICKETS: SupportTicket[] = [
-  {
-    id: 'TS-1024',
-    customer: 'Customer #1024',
-    issue: 'Fiber signal problem',
-    router: 'Nokia G-2425G',
-    status: 'open',
-    createdAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    ledStatus: [
-      { name: 'Power', color: 'green', state: 'solid' },
-      { name: 'Internet', color: 'gray', state: 'off' },
-      { name: 'Wi-Fi', color: 'green', state: 'solid' },
-      { name: 'LOS', color: 'red', state: 'blinking' },
-    ],
-    history: [
-      { step: 'Restart router', outcome: 'completed' },
-      { step: 'Check fiber cable', outcome: 'completed' },
-      { step: 'Wait 2 minutes', outcome: 'failed' },
-    ],
-    aiDiagnosis: 'Possible fiber signal loss.',
-  },
-  {
-    id: 'TS-1023',
-    customer: 'Customer #1023',
-    issue: 'Wi-Fi disabled',
-    router: 'TP-Link Archer C6',
-    status: 'resolved',
-    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    ledStatus: [
-      { name: 'Power', color: 'green', state: 'solid' },
-      { name: 'Wi-Fi', color: 'amber', state: 'blinking' },
-    ],
-    history: [{ step: 'Restart router', outcome: 'completed' }],
-    aiDiagnosis: 'Wi-Fi radio was disabled by a software toggle.',
-  },
-  {
-    id: 'TS-1022',
-    customer: 'Customer #1022',
-    issue: 'Power issue',
-    router: 'Netgear Nighthawk R7000',
-    status: 'escalated',
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    ledStatus: [{ name: 'Power', color: 'gray', state: 'off' }],
-    history: [
-      { step: 'Check power cable', outcome: 'failed' },
-      { step: 'Try a different outlet', outcome: 'failed' },
-    ],
-    aiDiagnosis: 'Device is not receiving power; likely a hardware fault.',
-  },
-]
 
 export const MOCK_ANALYTICS: AnalyticsSummary = {
   totalScans: 1248,

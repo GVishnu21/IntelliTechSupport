@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CONFIDENCE_THRESHOLD
+from app.db import create_ticket, get_ticket, init_db, list_tickets
 from app.orchestration.engine import get_session, start_session, verify_step
 from app.orchestration.playbooks import EQUIPMENT_CATALOG
 from app.schemas import (
@@ -12,6 +13,7 @@ from app.schemas import (
     EscalateResponse,
     ImageRequest,
     StepInfo,
+    TicketResponse,
     VerifyStepResponse,
 )
 from app.vision import get_vision_engine
@@ -24,6 +26,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+init_db()
 
 
 @app.get("/health")
@@ -106,16 +110,30 @@ def escalate(payload: EscalateRequest) -> EscalateResponse:
     session = get_session(payload.session_id)
     ticket_id = f"ITS-{uuid.uuid4().hex[:8].upper()}"
 
-    # Stub handoff: a real deployment forwards this structured payload to the
-    # care-agent desktop (PRD IT-5). Logging it is enough to demonstrate the
-    # shape of that payload for Phase 1.
-    print(
-        "[escalate]",
-        {
-            "ticket_id": ticket_id,
-            "equipment": session.equipment if session else "unknown",
-            "attempted_steps": session.step_index + 1 if session else 0,
-        },
+    # Real handoff: persists the diagnosis/history so a care agent can pull it
+    # up later (PRD IT-5) instead of the customer repeating the troubleshooting
+    # process. session_id won't resolve to a session for a manually-selected
+    # (non-photo) diagnosis -- the ticket is still created, just with the
+    # equipment/lights/history fields left at their unknown/empty defaults.
+    create_ticket(
+        ticket_id=ticket_id,
+        session_id=payload.session_id,
+        equipment=session.equipment if session else "unknown",
+        status_lights=session.last_status_lights if session else {},
+        history=session.history if session else [],
     )
 
     return EscalateResponse(ticket_id=ticket_id)
+
+
+@app.get("/tickets", response_model=list[TicketResponse])
+def get_tickets() -> list[TicketResponse]:
+    return [TicketResponse(**row) for row in list_tickets()]
+
+
+@app.get("/tickets/{ticket_id}", response_model=TicketResponse)
+def get_ticket_detail(ticket_id: str) -> TicketResponse:
+    row = get_ticket(ticket_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return TicketResponse(**row)

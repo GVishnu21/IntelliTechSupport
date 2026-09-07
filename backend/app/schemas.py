@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -38,3 +39,13 @@ class EscalateRequest(BaseModel):
 
 class EscalateResponse(BaseModel):
     ticket_id: str
+
+
+class TicketResponse(BaseModel):
+    id: str
+    session_id: Optional[str]
+    equipment: str
+    status: str
+    status_lights: dict[str, str]
+    history: list[dict]
+    created_at: datetime

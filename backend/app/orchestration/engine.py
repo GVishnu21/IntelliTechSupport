@@ -17,6 +17,11 @@ class Session:
     step_index: int = 0
     resolved: bool = False
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    # Latest LED reading and the outcome of each attempted step -- captured so
+    # an escalated session has real data to persist as a ticket, instead of
+    # the ticket only ever knowing the equipment name.
+    last_status_lights: dict[str, str] = field(default_factory=dict)
+    history: list[dict] = field(default_factory=list)
 
 
 def _is_healthy(reading: VisionReading, fault_light: str) -> bool:
@@ -30,6 +35,7 @@ def start_session(reading: VisionReading) -> tuple[Session, dict | None]:
         equipment=reading.equipment,
         fault_light=spec["fault_light"],
         steps=list(spec["steps"]),
+        last_status_lights=reading.status_lights,
     )
 
     if _is_healthy(reading, session.fault_light):
@@ -47,10 +53,15 @@ def verify_step(session_id: str, reading: VisionReading) -> tuple[bool, bool, di
     if session is None:
         return False, True, None
 
+    session.last_status_lights = reading.status_lights
+    attempted_step = session.steps[session.step_index]
+
     if _is_healthy(reading, session.fault_light):
         session.resolved = True
+        session.history.append({"step": attempted_step["instruction"], "outcome": "completed"})
         return True, False, None
 
+    session.history.append({"step": attempted_step["instruction"], "outcome": "failed"})
     session.step_index += 1
     if session.step_index >= len(session.steps):
         return False, True, None

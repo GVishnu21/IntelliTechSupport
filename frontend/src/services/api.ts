@@ -5,11 +5,12 @@ import type {
   RouterCatalogEntry,
   RouterDiagnosis,
   SupportTicket,
+  TicketStatus,
   TroubleshootingStep,
   VerifyResult,
 } from '../types'
 import { parseLedReadings } from '../utils/led'
-import { MOCK_ANALYTICS, MOCK_OUTAGE, MOCK_TICKETS, ROUTER_CATALOG, mockDiagnosisForRouter } from '../data/mockData'
+import { MOCK_ANALYTICS, MOCK_OUTAGE, ROUTER_CATALOG, mockDiagnosisForRouter } from '../data/mockData'
 
 interface BackendStepInfo {
   instruction: string
@@ -33,6 +34,16 @@ interface BackendVerifyStepResponse {
   escalate: boolean
   next_step: BackendStepInfo | null
   status_lights: Record<string, string>
+}
+
+interface BackendTicket {
+  id: string
+  session_id: string | null
+  equipment: string
+  status: string
+  status_lights: Record<string, string>
+  history: Array<{ step: string; outcome: 'completed' | 'failed' | 'skipped' }>
+  created_at: string
 }
 
 function toConfidenceLevel(value: number): DetectionConfidence {
@@ -78,6 +89,24 @@ function toStep(step: BackendStepInfo | null): TroubleshootingStep | null {
     description: step.instruction,
     checklist: step.checklist ?? [],
     note: step.note ?? undefined,
+  }
+}
+
+// There's no login, so a real ticket has no actual customer identity to
+// show -- "Anonymous customer" is honest about that rather than fabricating
+// a fake customer number the way the old mock data did.
+function toSupportTicket(raw: BackendTicket): SupportTicket {
+  const issue = deriveIssueMessage(raw.status_lights)
+  return {
+    id: raw.id,
+    customer: 'Anonymous customer',
+    issue,
+    router: raw.equipment === 'unknown' ? 'Unknown router' : raw.equipment,
+    status: (raw.status as TicketStatus) || 'escalated',
+    createdAt: raw.created_at,
+    ledStatus: parseLedReadings(raw.status_lights),
+    history: raw.history,
+    aiDiagnosis: issue,
   }
 }
 
@@ -129,8 +158,29 @@ export async function escalate(sessionId: string): Promise<{ ticketId: string }>
   return { ticketId: res.ticket_id }
 }
 
-// No backend support for outages, the router catalog, or the admin surface
-// yet — the following are all mock-backed.
+export async function getTickets(): Promise<SupportTicket[]> {
+  const res = await fetch('/api/tickets')
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const raw = (await res.json()) as BackendTicket[]
+  return raw.map(toSupportTicket)
+}
+
+export async function getTicket(id: string): Promise<SupportTicket | undefined> {
+  const res = await fetch(`/api/tickets/${id}`)
+  if (res.status === 404) {
+    return undefined
+  }
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const raw = (await res.json()) as BackendTicket
+  return toSupportTicket(raw)
+}
+
+// No backend support for outages, the router catalog, or the admin analytics
+// surface yet — the following are all mock-backed.
 
 export async function checkOutage(): Promise<OutageInfo> {
   return MOCK_OUTAGE
@@ -142,14 +192,6 @@ export function getRouterCatalog(): RouterCatalogEntry[] {
 
 export function getMockDiagnosis(entry: RouterCatalogEntry): RouterDiagnosis {
   return mockDiagnosisForRouter(entry)
-}
-
-export async function getTickets(): Promise<SupportTicket[]> {
-  return MOCK_TICKETS
-}
-
-export async function getTicket(id: string): Promise<SupportTicket | undefined> {
-  return MOCK_TICKETS.find((ticket) => ticket.id === id)
 }
 
 export async function getAnalytics(): Promise<AnalyticsSummary> {
