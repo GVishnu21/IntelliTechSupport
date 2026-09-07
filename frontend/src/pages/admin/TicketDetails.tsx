@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getTicket } from '../../services/api'
+import { getTicket, updateTicketStatus } from '../../services/api'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { LedStatusList } from '../../components/diagnosis/LedStatusList'
 import { RouterImage } from '../../components/diagnosis/RouterImage'
 import { LoadingState } from '../../components/ui/LoadingState'
+import { ErrorState } from '../../components/ui/ErrorState'
 import type { SupportTicket } from '../../types'
 
 const OUTCOME_LABEL: Record<'completed' | 'failed' | 'skipped', string> = {
@@ -13,17 +14,31 @@ const OUTCOME_LABEL: Record<'completed' | 'failed' | 'skipped', string> = {
   skipped: 'Skipped',
 }
 
+type BusyAction = 'resolve' | 'escalate' | null
+
 export default function AdminTicketDetails() {
   const { id } = useParams()
   const [ticket, setTicket] = useState<SupportTicket | null | undefined>(undefined)
+  const [busyAction, setBusyAction] = useState<BusyAction>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
     getTicket(id).then(setTicket)
   }, [id])
 
-  function markResolved() {
-    setTicket((current) => (current ? { ...current, status: 'resolved' } : current))
+  async function handleUpdateStatus(status: 'resolved' | 'escalated', busy: BusyAction) {
+    if (!ticket) return
+    setBusyAction(busy)
+    setActionError(null)
+    try {
+      const updated = await updateTicketStatus(ticket.id, status)
+      setTicket(updated)
+    } catch {
+      setActionError("We're having trouble connecting. Check your connection and try again.")
+    } finally {
+      setBusyAction(null)
+    }
   }
 
   if (ticket === undefined) {
@@ -84,6 +99,8 @@ export default function AdminTicketDetails() {
           </ol>
         </div>
 
+        {actionError && <ErrorState title={actionError} inline />}
+
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
@@ -93,16 +110,19 @@ export default function AdminTicketDetails() {
           </button>
           <button
             type="button"
-            onClick={markResolved}
-            className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white hover:bg-primary-dark"
+            onClick={() => handleUpdateStatus('resolved', 'resolve')}
+            disabled={busyAction !== null}
+            className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-6 text-base font-semibold text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Mark Resolved
+            {busyAction === 'resolve' ? 'Marking resolved…' : 'Mark Resolved'}
           </button>
           <button
             type="button"
-            className="flex min-h-11 items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-error hover:bg-red-50"
+            onClick={() => handleUpdateStatus('escalated', 'escalate')}
+            disabled={busyAction !== null}
+            className="flex min-h-11 items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-error hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Escalate to Network Team
+            {busyAction === 'escalate' ? 'Escalating…' : 'Escalate to Network Team'}
           </button>
         </div>
       </div>

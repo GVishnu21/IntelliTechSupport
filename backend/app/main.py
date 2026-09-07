@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CONFIDENCE_THRESHOLD
-from app.db import create_ticket, get_ticket, init_db, list_tickets
+from app.db import create_ticket, get_ticket, init_db, list_tickets, update_ticket_status
 from app.orchestration.engine import get_session, start_session, verify_step
 from app.orchestration.playbooks import EQUIPMENT_CATALOG
 from app.schemas import (
@@ -14,6 +14,7 @@ from app.schemas import (
     ImageRequest,
     StepInfo,
     TicketResponse,
+    TicketStatusUpdate,
     VerifyStepResponse,
 )
 from app.vision import get_vision_engine
@@ -134,6 +135,14 @@ def get_tickets() -> list[TicketResponse]:
 @app.get("/tickets/{ticket_id}", response_model=TicketResponse)
 def get_ticket_detail(ticket_id: str) -> TicketResponse:
     row = get_ticket(ticket_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return TicketResponse(**row)
+
+
+@app.patch("/tickets/{ticket_id}", response_model=TicketResponse)
+def patch_ticket_status(ticket_id: str, payload: TicketStatusUpdate) -> TicketResponse:
+    row = update_ticket_status(ticket_id, payload.status)
     if row is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return TicketResponse(**row)

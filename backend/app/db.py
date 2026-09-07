@@ -55,3 +55,11 @@ def list_tickets() -> list[dict]:
 def get_ticket(ticket_id: str) -> dict | None:
     with get_connection() as conn:
         return conn.execute("SELECT * FROM tickets WHERE id = %s", (ticket_id,)).fetchone()
+
+
+def update_ticket_status(ticket_id: str, status: str) -> dict | None:
+    with get_connection() as conn:
+        return conn.execute(
+            "UPDATE tickets SET status = %s WHERE id = %s RETURNING *",
+            (status, ticket_id),
+        ).fetchone()

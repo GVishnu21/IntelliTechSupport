@@ -7,6 +7,7 @@ import {
   getRouterCatalog,
   getTicket,
   getTickets,
+  updateTicketStatus,
   verifyStepWithPhoto,
 } from './api'
 
@@ -250,6 +251,37 @@ describe('getTicket', () => {
 
     const ticket = await getTicket('ITS-ABCD1234')
     expect(ticket?.router).toBe('Unknown router')
+  })
+})
+
+describe('updateTicketStatus', () => {
+  it('sends a PATCH with the new status and maps the updated ticket', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 'ITS-ABCD1234',
+        session_id: 'session-1',
+        equipment: 'Netgear Nighthawk R7000',
+        status: 'resolved',
+        status_lights: { internet: 'solid_green' },
+        history: [],
+        created_at: '2026-09-07T12:00:00Z',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const ticket = await updateTicketStatus('ITS-ABCD1234', 'resolved')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/tickets/ITS-ABCD1234',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'resolved' }) })
+    )
+    expect(ticket.status).toBe('resolved')
+  })
+
+  it('throws when the backend rejects the update', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }))
+    await expect(updateTicketStatus('does-not-exist', 'resolved')).rejects.toThrow('Request failed: 404')
   })
 })
 

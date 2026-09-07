@@ -179,6 +179,19 @@ export async function getTicket(id: string): Promise<SupportTicket | undefined> 
   return toSupportTicket(raw)
 }
 
+export async function updateTicketStatus(id: string, status: TicketStatus): Promise<SupportTicket> {
+  const res = await fetch(`/api/tickets/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const raw = (await res.json()) as BackendTicket
+  return toSupportTicket(raw)
+}
+
 // No backend support for outages, the router catalog, or the admin analytics
 // surface yet — the following are all mock-backed.
 

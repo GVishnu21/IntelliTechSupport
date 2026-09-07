@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -49,3 +49,7 @@ class TicketResponse(BaseModel):
     status_lights: dict[str, str]
     history: list[dict]
     created_at: datetime
+
+
+class TicketStatusUpdate(BaseModel):
+    status: Literal["open", "in_progress", "resolved", "escalated"]
