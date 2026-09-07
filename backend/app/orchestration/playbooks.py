@@ -1,7 +1,7 @@
-# Phase-1 equipment catalog: two SKUs is enough to demonstrate the full
-# diagnose -> guided fix -> verify loop end to end (IT-1 through IT-5).
-# Real deployments would load this from an operator-supplied catalog (PRD
-# section 11) instead of hardcoding it.
+# Phase-1 equipment catalog: three named SKUs plus a generic fallback is
+# enough to demonstrate the full diagnose -> guided fix -> verify loop end
+# to end (IT-1 through IT-5). Real deployments would load this from an
+# operator-supplied catalog (PRD section 11) instead of hardcoding it.
 
 HEALTHY_STATE = "solid_green"
 

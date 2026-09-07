@@ -21,11 +21,22 @@ export function Header() {
           <span className="text-base font-medium text-text-secondary/50" aria-disabled="true">
             My Issues
           </span>
-          <span className="text-base font-medium text-text-secondary/50" aria-disabled="true">
+          <NavLink
+            to="/faq"
+            className={({ isActive }) =>
+              `text-base font-medium ${isActive ? 'text-primary' : 'text-text-secondary hover:text-text'}`
+            }
+          >
             Help
-          </span>
+          </NavLink>
         </nav>
-        <button type="button" aria-label="Profile" className="flex min-h-11 min-w-11 items-center justify-center">
+        <button
+          type="button"
+          aria-label="Profile"
+          disabled
+          title="Sign-in isn't available yet"
+          className="flex min-h-11 min-w-11 items-center justify-center opacity-50 disabled:cursor-not-allowed"
+        >
           <UserCircle size={24} className="text-text-secondary" />
         </button>
       </div>

@@ -33,17 +33,18 @@ export default function CameraCapture({
   }, [error, cameraReady, onError])
 
   // If a request fails, `busy` goes back to false while this component stays
-  // mounted (same screen) — drop the freeze-frame so the customer sees the
-  // live feed again and can retake, instead of being stuck looking at the
-  // photo that just failed.
-  useEffect(() => {
-    if (!busy) {
-      setCapturedImage(null)
-    }
-  }, [busy])
+  // mounted (same screen) -- derived (not stored) so the freeze-frame drops
+  // the moment `busy` clears, showing the live feed again for a retake,
+  // instead of being stuck looking at the photo that just failed.
+  const showFrozenFrame = capturedImage !== null && busy
 
   useEffect(() => {
     let cancelled = false
+    // Captured once, up front, so the cleanup below uses the same node it
+    // started -- re-reading videoRef.current inside the cleanup isn't safe,
+    // since the ref may already be null or pointing elsewhere by the time
+    // cleanup runs.
+    const video = videoRef.current
 
     async function startCamera() {
       try {
@@ -67,8 +68,6 @@ export default function CameraCapture({
 
         streamRef.current = stream
 
-        const video = videoRef.current
-
         if (!video) {
           stream.getTracks().forEach((track) => track.stop())
           return
@@ -91,7 +90,6 @@ export default function CameraCapture({
             // Ignore AbortError caused by the video element being
             // interrupted while the browser is starting playback.
             if (err instanceof DOMException && err.name === 'AbortError') {
-              console.log('Camera playback was interrupted; retrying...')
               return
             }
 
@@ -149,8 +147,6 @@ export default function CameraCapture({
 
     return () => {
       cancelled = true
-
-      const video = videoRef.current
 
       if (video) {
         video.pause()
@@ -221,11 +217,11 @@ export default function CameraCapture({
           playsInline
           muted
           className={`aspect-[3/4] w-full rounded-lg bg-black object-cover ${
-            capturedImage ? 'invisible' : ''
+            showFrozenFrame ? 'invisible' : ''
           }`}
         />
 
-        {capturedImage && (
+        {showFrozenFrame && (
           <img
             src={capturedImage}
             alt="Captured equipment"

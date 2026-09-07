@@ -21,10 +21,21 @@ Two independent apps in one repo, talking over HTTP:
 ```
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-`--host 0.0.0.0` isn't required but matches how the frontend's LAN dev setup expects it. No
-lint config, formatter, or test suite exists for the backend yet — verify backend changes by
-running it and hitting the endpoints (`GET /health`, `POST /diagnose`, etc.) directly or through
-the frontend.
+`--host 0.0.0.0` isn't required but matches how the frontend's LAN dev setup expects it. No lint
+config or formatter exists for the backend. A pytest suite does exist (`backend/tests/`) — install
+`requirements-dev.txt` once, then run it from `backend/`:
+```
+pip install -r requirements-dev.txt   # adds pytest on top of requirements.txt
+pytest tests/ -v
+```
+It runs fully offline: `tests/conftest.py` no-ops `init_db()` before `app.main` is ever imported
+(that call happens at module import time, so patching it any later wouldn't work) and fakes every
+DB/vision function `app.main` calls, so no real Postgres or Gemini traffic happens and no `.env`
+values are required. `tests/test_engine.py` and `tests/test_scans_summary.py` exercise real,
+unpatched logic (the in-memory session state machine, and `db._summarize_scans()`'s aggregation
+math) directly, without HTTP or a database at all. Still verify end-to-end behavior manually too —
+hitting the endpoints (`GET /health`, `POST /diagnose`, etc.) directly or through the frontend —
+since the test suite never touches the real vision engine or a real database.
 
 Runs against the mock vision engine by default. To exercise the real Gemini pipeline, copy
 `backend/.env.example` to `backend/.env` and set `GEMINI_API_KEY` (free tier at
@@ -81,43 +92,62 @@ the orchestration logic both pick it up automatically. Sessions are in-memory (`
 backend doesn't recognize (e.g. one the frontend fabricated for a non-photo flow) causes
 `verify_step` to escalate immediately rather than error.
 
-`app/main.py` exposes `/diagnose`, `/verify-step`, `/escalate`, `/tickets`, `/tickets/{id}`, plus
-`/health`. `/escalate` persists a real row to Postgres (`app/db.py`) rather than just logging —
-`Session` (in `engine.py`) now tracks `last_status_lights` and a per-step `history` list precisely
-so escalate has real data to save instead of just the equipment name. A `session_id` the backend
-doesn't recognize (e.g. one the frontend fabricated for a non-photo/manual-selection flow) still
-creates a ticket, just with `equipment="unknown"`, empty `status_lights`, and empty `history` —
-escalation is never blocked on having a real session behind it.
+`app/main.py` exposes `/diagnose`, `/verify-step`, `/skip-step`, `/escalate`, `/tickets`,
+`/tickets/{id}`, `/scans/{id}/feedback`, `/analytics/summary`, plus `/health`. `/diagnose` creates a
+row in the `scans` table on *every* call (recognized or not, via `create_scan()`) — that's the real
+denominator behind `/analytics/summary`'s resolution rate, escalation rate, avg resolution time,
+first contact resolution, CSAT, trends, and top steps, all computed by `get_scans_summary()` in
+`db.py`. `/verify-step` and `/skip-step` both call `update_scan_outcome()` when a session concludes
+(resolved/escalated); `/skip-step` advances the session without requiring a photo and always
+escalates once steps run out, since skipping a step never confirms resolution the way a verified
+photo does. `/escalate` persists a real row to Postgres (`app/db.py`) rather than just logging —
+`Session` (in `engine.py`) tracks `last_status_lights` and a per-step `history` list precisely so
+escalate has real data to save instead of just the equipment name, plus an optional
+customer-supplied `contact_phone` (there's no login, so this is the only real contact info a ticket
+can ever carry). A `session_id` the backend doesn't recognize (e.g. one the frontend fabricated for
+a non-photo/manual-selection flow) still creates a ticket, just with `equipment="unknown"`, empty
+`status_lights`, and empty `history` — escalation is never blocked on having a real session behind it.
 
 `app/db.py` opens one connection per call rather than pooling (fine at this scale) and has no
-migration framework — `_SCHEMA` in that file is the only source of truth for the `tickets` table
-shape; edit it directly and it re-applies (idempotent `CREATE TABLE IF NOT EXISTS`) next restart.
+migration framework — `_SCHEMA` is the only source of truth for the `tickets` and `scans` table
+shapes. For a brand-new table, editing `_SCHEMA`'s `CREATE TABLE` is enough; it re-applies
+idempotently (`CREATE TABLE IF NOT EXISTS`) on next restart. For a new column on a table that
+already exists in the live database (e.g. `tickets.contact_phone`), `CREATE TABLE IF NOT EXISTS`
+alone is a no-op there — `_SCHEMA` also needs an explicit `ALTER TABLE ... ADD COLUMN IF NOT
+EXISTS`, or the column never actually gets added to the real table.
 
 ### Frontend: one fetch boundary, route-state-driven flow, real backend + mock hybrid
 
 `frontend/src/services/api.ts` is the *only* module allowed to call `fetch`. It's split into two
 groups, commented accordingly:
-- Real backend-wired: `analyzeRouter`, `verifyStepWithPhoto`, `escalate`, `getTickets`, `getTicket`
-  — these hit the actual FastAPI endpoints and translate the backend's snake_case/flat response
-  shapes into the richer frontend types in `src/types/index.ts` (e.g. a raw
+- Real backend-wired: `analyzeRouter`, `verifyStepWithPhoto`, `skipStep`, `escalate`, `getTickets`,
+  `getTicket`, `updateTicketStatus`, `submitScanFeedback`, `getAnalyticsSummary` — these hit the
+  actual FastAPI endpoints and translate the backend's snake_case/flat response shapes into the
+  richer frontend types in `src/types/index.ts` (e.g. a raw
   `status_lights: {"internet": "blinking_red"}` map becomes `LedReading[]` with semantic
   color/state via `src/utils/led.ts`, and a raw numeric `confidence` becomes a bucketed
   `high`/`medium`/`low` — the UI never shows a raw AI confidence number). Real tickets have no
   customer identity behind them (no login exists), so `toSupportTicket()` sets
-  `customer: 'Anonymous customer'` rather than fabricating a fake name/number.
-- Mock-backed: `checkOutage`, `getRouterCatalog`, `getMockDiagnosis`, `getAnalytics` — there's no
-  backend support for outage detection, a router catalog, or the admin analytics/dashboard
-  aggregates, so these read from `src/data/mockData.ts`. When adding backend support for one of
-  these later, only `api.ts` needs to change — page components never know the difference.
+  `customer: 'Anonymous customer'` rather than fabricating a fake name/number; the one piece of
+  real contact info a ticket can carry is an optional `contactPhone`, captured only if the
+  customer left a callback number on the Escalate screen.
+- Mock-backed: `checkOutage`, `getRouterCatalog`, `getMockDiagnosis`, `getRepeatContactRate` —
+  there's no backend support for outage detection, a router catalog, or repeat-contact detection
+  (which would need a login this app doesn't have), so these read from `src/data/mockData.ts`.
+  When adding backend support for one of these later, only `api.ts` needs to change — page
+  components never know the difference.
 
-`admin/Dashboard.tsx` and `admin/Analytics.tsx` mix both sources on the same page, chart by chart
-— common issues/router models/LED patterns and the escalation trend are computed for real from
-`getTickets()` via `src/utils/ticketStats.ts` (pure `deriveX()` functions, easy to unit test
-without a live DB), marked with a `LiveBadge`; the metric tiles (total scans, resolution rate,
-CSAT, etc.) and the resolution trend stay on `getAnalytics()`'s mock data because nothing persists
-successful (non-escalated) sessions yet, so there's no real denominator to compute a rate from.
-Unmarked numbers are demo data — don't assume a number without a `LiveBadge` is real just because
-it sits next to one that is.
+`admin/Dashboard.tsx` and `admin/Analytics.tsx` are almost entirely real now. Every metric tile,
+both trend charts, and the top-troubleshooting-steps chart come from `getAnalyticsSummary()`,
+backed by a `scans` table that gets a row on *every* `/diagnose` call, not just escalations (see
+the backend section above) — this replaced an earlier mock `getAnalytics()` entirely, so there's
+no more real/mock split to track chart-by-chart on these two pages. Common issues, router models,
+and LED patterns are computed separately from `getTickets()` via `src/utils/ticketStats.ts` (pure
+`deriveX()` functions, easy to unit test without a live DB) — real for a different reason (ticket
+history) rather than mock. The one remaining mock number on either page is Analytics.tsx's Repeat
+Contact Rate (`getRepeatContactRate()`), disclaimed inline right on the page — detecting a
+returning customer needs an identity this app doesn't have. `csat` can come back `null` (no
+ratings submitted yet) and both pages render that as "No ratings yet" rather than a fake number.
 
 There's no global state store. Flow state (the diagnosis, the current troubleshooting step, the
 session id, steps-completed count) is threaded page-to-page via React Router's navigation state

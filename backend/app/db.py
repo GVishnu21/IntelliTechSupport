@@ -154,6 +154,13 @@ def get_scans_summary() -> dict:
             "SELECT history FROM scans WHERE outcome = 'resolved' AND jsonb_array_length(history) > 0"
         ).fetchall()
 
+    return _summarize_scans(totals, trend_rows, step_rows)
+
+
+# Split out from get_scans_summary() so the aggregation math -- ratios,
+# trend-skipping-empty-days, top-step counting -- can be unit tested against
+# plain dicts/lists without a live Postgres connection.
+def _summarize_scans(totals: dict, trend_rows: list[dict], step_rows: list[dict]) -> dict:
     resolution_trend = []
     escalation_trend = []
     for row in trend_rows:
