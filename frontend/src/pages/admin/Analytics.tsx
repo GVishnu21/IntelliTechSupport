@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAnalytics, getTickets } from '../../services/api'
+import { getAnalyticsSummary, getRepeatContactRate, getTickets } from '../../services/api'
 import { TrendLineChart } from '../../components/admin/TrendLineChart'
 import { CategoryBarChart } from '../../components/admin/CategoryBarChart'
-import { LiveBadge } from '../../components/admin/LiveBadge'
 import { DateRangeFilter, type DateRangeOption } from '../../components/admin/DateRangeFilter'
 import { filterTrend } from '../../utils/trend'
-import { deriveCommonIssues, deriveCommonLedPatterns, deriveEscalationCountTrend } from '../../utils/ticketStats'
+import { deriveCommonIssues, deriveCommonLedPatterns } from '../../utils/ticketStats'
 import { LoadingState } from '../../components/ui/LoadingState'
 import type { AnalyticsSummary, SupportTicket } from '../../types'
 
@@ -18,7 +17,7 @@ export default function AdminAnalytics() {
   const [customEnd, setCustomEnd] = useState('')
 
   useEffect(() => {
-    getAnalytics().then(setAnalytics)
+    getAnalyticsSummary().then(setAnalytics)
     getTickets().then(setTickets)
   }, [])
 
@@ -26,21 +25,26 @@ export default function AdminAnalytics() {
     () => (analytics ? filterTrend(analytics.resolutionTrend, range, customStart, customEnd) : []),
     [analytics, range, customStart, customEnd]
   )
+  const escalationTrend = useMemo(
+    () => (analytics ? filterTrend(analytics.escalationTrend, range, customStart, customEnd) : []),
+    [analytics, range, customStart, customEnd]
+  )
   const commonIssues = useMemo(() => deriveCommonIssues(tickets ?? []), [tickets])
   const commonLedPatterns = useMemo(() => deriveCommonLedPatterns(tickets ?? []), [tickets])
-  const escalationTrend = useMemo(() => deriveEscalationCountTrend(tickets ?? []), [tickets])
 
   if (!analytics || !tickets) {
     return <LoadingState />
   }
+
+  const repeatContactRate = getRepeatContactRate()
 
   const stats: Array<[string, string]> = [
     ['Resolution Rate', `${Math.round(analytics.resolutionRate * 100)}%`],
     ['Escalation Rate', `${Math.round(analytics.escalationRate * 100)}%`],
     ['Average Resolution Time', analytics.avgResolutionTime],
     ['First Contact Resolution', `${Math.round(analytics.firstContactResolution * 100)}%`],
-    ['Repeat Contact Rate', `${Math.round(analytics.repeatContactRate * 100)}%`],
-    ['CSAT', analytics.csat.toFixed(1)],
+    ['Repeat Contact Rate', `${Math.round(repeatContactRate * 100)}%`],
+    ['CSAT', analytics.csat === null ? 'No ratings yet' : analytics.csat.toFixed(1)],
   ]
 
   return (
@@ -61,9 +65,9 @@ export default function AdminAnalytics() {
         ))}
       </div>
       <p className="mb-6 text-sm text-text-secondary">
-        Stats above are illustrative demo data — full scan tracking (including successful,
-        non-escalated sessions) isn't persisted yet. Charts below marked <LiveBadge /> are computed
-        from real escalated tickets.
+        Repeat Contact Rate is illustrative demo data — detecting a returning customer requires an
+        identity, and this app has no login. Every other stat and chart below is computed from real
+        scans and tickets.
       </p>
 
       <div className="mb-4">
@@ -78,28 +82,33 @@ export default function AdminAnalytics() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <TrendLineChart title="Resolution trend" data={resolutionTrend} color="#16A34A" />
+        <TrendLineChart
+          title="Resolution trend"
+          data={resolutionTrend}
+          color="#16A34A"
+          emptyMessage="No concluded scans yet — this fills in once customers finish troubleshooting."
+        />
         <TrendLineChart
           title="Escalation trend"
-          badge={<LiveBadge />}
           data={escalationTrend}
           color="#D97706"
-          valueFormatter={(value) => `${value} escalation${value === 1 ? '' : 's'}`}
-          emptyMessage="No escalations yet — this will fill in as customers escalate."
+          emptyMessage="No concluded scans yet — this fills in once customers finish troubleshooting."
         />
         <CategoryBarChart
           title="Common router problems"
-          badge={<LiveBadge />}
           data={commonIssues}
           emptyMessage="No escalations yet — common problems will appear here once they happen."
         />
         <CategoryBarChart
           title="Most common LED patterns"
-          badge={<LiveBadge />}
           data={commonLedPatterns}
           emptyMessage="No escalations yet — LED patterns will appear here once they happen."
         />
-        <CategoryBarChart title="Most successful troubleshooting steps" data={analytics.topTroubleshootingSteps} />
+        <CategoryBarChart
+          title="Most successful troubleshooting steps"
+          data={analytics.topTroubleshootingSteps}
+          emptyMessage="No resolved scans yet — successful steps will appear here once customers finish troubleshooting."
+        />
       </div>
     </div>
   )

@@ -8,6 +8,7 @@ import type { TroubleshootingStep } from '../types'
 
 interface VerifyLocationState {
   sessionId?: string
+  scanId?: string
   step?: TroubleshootingStep
   issue?: string
   stepsCompleted?: number
@@ -16,7 +17,7 @@ interface VerifyLocationState {
 export default function Verify() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { sessionId, step, issue, stepsCompleted = 0 } = (location.state as VerifyLocationState) ?? {}
+  const { sessionId, scanId, step, issue, stepsCompleted = 0 } = (location.state as VerifyLocationState) ?? {}
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +39,7 @@ export default function Verify() {
       const result = await verifyStepWithPhoto(sessionId!, imageBase64)
 
       if (result.resolved) {
-        navigate('/success', { state: { issue, stepsCompleted } })
+        navigate('/success', { state: { scanId, issue, stepsCompleted } })
         return
       }
 
@@ -52,7 +53,7 @@ export default function Verify() {
       }
 
       navigate('/troubleshoot', {
-        state: { sessionId, step: result.nextStep, issue, stepsCompleted },
+        state: { sessionId, scanId, step: result.nextStep, issue, stepsCompleted },
       })
     } catch {
       setError("We're having trouble connecting. Check your connection and try again.")

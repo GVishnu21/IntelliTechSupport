@@ -69,5 +69,22 @@ def verify_step(session_id: str, reading: VisionReading) -> tuple[bool, bool, di
     return False, False, session.steps[session.step_index]
 
 
+def skip_step(session_id: str) -> tuple[bool, dict | None]:
+    """Advance past the current step without photo verification. Returns
+    (escalate, next_step). A skipped step never confirms resolution, so
+    running out of steps always escalates rather than resolving."""
+    session = _SESSIONS.get(session_id)
+    if session is None:
+        return True, None
+
+    attempted_step = session.steps[session.step_index]
+    session.history.append({"step": attempted_step["instruction"], "outcome": "skipped"})
+    session.step_index += 1
+    if session.step_index >= len(session.steps):
+        return True, None
+
+    return False, session.steps[session.step_index]
+
+
 def get_session(session_id: str) -> Session | None:
     return _SESSIONS.get(session_id)

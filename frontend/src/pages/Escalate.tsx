@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Headset } from 'lucide-react'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button'
 import { SecondaryButton } from '../components/ui/SecondaryButton'
 import { ErrorState } from '../components/ui/ErrorState'
 import { escalate } from '../services/api'
+import { clearActiveSession } from '../utils/sessionContinuity'
 
 interface EscalateLocationState {
   sessionId?: string
@@ -21,13 +22,20 @@ export default function Escalate() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ticketId, setTicketId] = useState<string | null>(null)
+  const [phone, setPhone] = useState('')
+
+  useEffect(() => {
+    // Reaching Escalate means troubleshooting is over -- nothing left to
+    // "continue," whether or not the customer has clicked Contact Support yet.
+    clearActiveSession()
+  }, [])
 
   async function handleContactSupport() {
     if (!sessionId) return
     setBusy(true)
     setError(null)
     try {
-      const result = await escalate(sessionId)
+      const result = await escalate(sessionId, phone.trim())
       setTicketId(result.ticketId)
     } catch {
       setError("We're having trouble connecting. Check your connection and try again.")
@@ -72,6 +80,22 @@ export default function Escalate() {
           <p className="text-sm text-text-secondary">Steps attempted</p>
           <p className="text-base font-medium text-text">{stepsCompleted}</p>
           <p className="text-sm font-medium text-error">Still unresolved</p>
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="contact-phone" className="text-sm font-medium text-text">
+            Callback number <span className="font-normal text-text-secondary">(optional)</span>
+          </label>
+          <input
+            id="contact-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="So an agent can reach you"
+            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-base text-text placeholder:text-text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          />
         </div>
 
         {error && <ErrorState title={error} inline />}

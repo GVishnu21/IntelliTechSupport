@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { LabeledCount } from '../../types'
 
@@ -6,11 +6,10 @@ interface CategoryBarChartProps {
   title: string
   data: LabeledCount[]
   color?: string
-  badge?: ReactNode
   emptyMessage?: string
 }
 
-export function CategoryBarChart({ title, data, color = '#2563EB', badge, emptyMessage }: CategoryBarChartProps) {
+export function CategoryBarChart({ title, data, color = '#2563EB', emptyMessage }: CategoryBarChartProps) {
   const [showTable, setShowTable] = useState(false)
   const panelId = useId()
   const sorted = [...data].sort((a, b) => b.count - a.count)
@@ -18,10 +17,7 @@ export function CategoryBarChart({ title, data, color = '#2563EB', badge, emptyM
   if (sorted.length === 0 && emptyMessage) {
     return (
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <h3 className="text-lg font-bold text-text">
-          {title}
-          {badge}
-        </h3>
+        <h3 className="text-lg font-bold text-text">{title}</h3>
         <p className="py-8 text-center text-text-secondary">{emptyMessage}</p>
       </div>
     )
@@ -30,10 +26,7 @@ export function CategoryBarChart({ title, data, color = '#2563EB', badge, emptyM
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-lg font-bold text-text">
-          {title}
-          {badge}
-        </h3>
+        <h3 className="text-lg font-bold text-text">{title}</h3>
         <button
           type="button"
           onClick={() => setShowTable((value) => !value)}

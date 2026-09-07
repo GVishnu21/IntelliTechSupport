@@ -10,6 +10,7 @@ import Verify from './pages/Verify'
 import Success from './pages/Success'
 import Escalate from './pages/Escalate'
 import SelectRouter from './pages/SelectRouter'
+import Faq from './pages/Faq'
 import { LoadingState } from './components/ui/LoadingState'
 
 // Code-split: only the admin pages pull in Recharts. Lazy-loading them keeps
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/success" element={<Success />} />
       <Route path="/escalate" element={<Escalate />} />
       <Route path="/select-router" element={<SelectRouter />} />
+      <Route path="/faq" element={<Faq />} />
       <Route
         path="/admin"
         element={

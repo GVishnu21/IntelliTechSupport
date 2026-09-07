@@ -3,10 +3,13 @@ import {
   analyzeRouter,
   checkOutage,
   escalate,
-  getAnalytics,
+  getAnalyticsSummary,
+  getRepeatContactRate,
   getRouterCatalog,
   getTicket,
   getTickets,
+  skipStep,
+  submitScanFeedback,
   updateTicketStatus,
   verifyStepWithPhoto,
 } from './api'
@@ -21,6 +24,7 @@ describe('analyzeRouter', () => {
       ok: true,
       json: async () => ({
         session_id: 'abc-123',
+        scan_id: 'abc-123',
         equipment: 'Netgear Nighthawk R7000',
         confidence: 0.92,
         status_lights: { power: 'solid_green', internet: 'blinking_red', wifi: 'solid_green' },
@@ -34,6 +38,7 @@ describe('analyzeRouter', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/diagnose', expect.objectContaining({ method: 'POST' }))
     expect(result.sessionId).toBe('abc-123')
+    expect(result.scanId).toBe('abc-123')
     expect(result.manufacturer).toBe('Netgear')
     expect(result.model).toBe('Nighthawk R7000')
     expect(result.confidence).toBe('high')
@@ -59,7 +64,8 @@ describe('analyzeRouter', () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          session_id: 'x',
+          session_id: '',
+          scan_id: 'scan-only-id',
           equipment: 'unknown',
           confidence: 0.1,
           status_lights: {},
@@ -74,6 +80,7 @@ describe('analyzeRouter', () => {
     expect(result.manufacturer).toBe('Unknown')
     expect(result.lowConfidence).toBe(true)
     expect(result.firstStep).toBeNull()
+    expect(result.scanId).toBe('scan-only-id')
   })
 
   it('throws when the backend responds with an error status', async () => {
@@ -179,6 +186,70 @@ describe('escalate', () => {
     const result = await escalate('session-1')
     expect(result).toEqual({ ticketId: 'TS-9001' })
   })
+
+  it('sends a null contact_phone when none was given', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ticket_id: 'TS-9001' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await escalate('session-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/escalate',
+      expect.objectContaining({ body: JSON.stringify({ session_id: 'session-1', contact_phone: null }) })
+    )
+  })
+
+  it('sends the callback number when the customer provided one', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ticket_id: 'TS-9001' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await escalate('session-1', '555-0100')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/escalate',
+      expect.objectContaining({ body: JSON.stringify({ session_id: 'session-1', contact_phone: '555-0100' }) })
+    )
+  })
+})
+
+describe('skipStep', () => {
+  it('maps an escalate response with no next step', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ escalate: true, next_step: null }) })
+    )
+
+    const result = await skipStep('session-1')
+    expect(result).toEqual({ escalate: true, nextStep: null })
+  })
+
+  it('maps a response that advances to the next step', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        escalate: false,
+        next_step: { instruction: 'Check the cable.', step_number: 2, total_steps: 3 },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await skipStep('session-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/skip-step', expect.objectContaining({ method: 'POST' }))
+    expect(result.escalate).toBe(false)
+    expect(result.nextStep).toEqual({
+      stepNumber: 2,
+      totalSteps: 3,
+      title: 'Step 2',
+      description: 'Check the cable.',
+      checklist: [],
+    })
+  })
+
+  it('throws when the backend responds with an error status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
+    await expect(skipStep('session-1')).rejects.toThrow('Request failed: 500')
+  })
 })
 
 describe('getTickets', () => {
@@ -251,6 +322,29 @@ describe('getTicket', () => {
 
     const ticket = await getTicket('ITS-ABCD1234')
     expect(ticket?.router).toBe('Unknown router')
+    expect(ticket?.contactPhone).toBeUndefined()
+  })
+
+  it('maps a real callback number when the customer provided one', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'ITS-ABCD1234',
+          session_id: 'session-1',
+          equipment: 'unknown',
+          status: 'escalated',
+          status_lights: {},
+          history: [],
+          contact_phone: '555-0100',
+          created_at: '2026-09-07T12:00:00Z',
+        }),
+      })
+    )
+
+    const ticket = await getTicket('ITS-ABCD1234')
+    expect(ticket?.contactPhone).toBe('555-0100')
   })
 })
 
@@ -285,6 +379,103 @@ describe('updateTicketStatus', () => {
   })
 })
 
+describe('getAnalyticsSummary', () => {
+  it('maps the real backend analytics response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          total_scans: 42,
+          resolution_rate: 0.75,
+          escalation_rate: 0.25,
+          avg_resolution_time: '4m 32s',
+          first_contact_resolution: 0.6,
+          csat: 4.2,
+          resolution_trend: [{ date: '2026-09-07', value: 0.75 }],
+          escalation_trend: [{ date: '2026-09-07', value: 0.25 }],
+          top_troubleshooting_steps: [{ label: 'Restart the router', count: 10 }],
+        }),
+      })
+    )
+
+    const summary = await getAnalyticsSummary()
+    expect(summary).toEqual({
+      totalScans: 42,
+      resolutionRate: 0.75,
+      escalationRate: 0.25,
+      avgResolutionTime: '4m 32s',
+      firstContactResolution: 0.6,
+      csat: 4.2,
+      resolutionTrend: [{ date: '2026-09-07', value: 0.75 }],
+      escalationTrend: [{ date: '2026-09-07', value: 0.25 }],
+      topTroubleshootingSteps: [{ label: 'Restart the router', count: 10 }],
+    })
+  })
+
+  it('passes through a null csat when no ratings exist yet', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          total_scans: 0,
+          resolution_rate: 0,
+          escalation_rate: 0,
+          avg_resolution_time: '—',
+          first_contact_resolution: 0,
+          csat: null,
+          resolution_trend: [],
+          escalation_trend: [],
+          top_troubleshooting_steps: [],
+        }),
+      })
+    )
+
+    const summary = await getAnalyticsSummary()
+    expect(summary.csat).toBeNull()
+  })
+
+  it('throws when the backend responds with an error status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
+    await expect(getAnalyticsSummary()).rejects.toThrow('Request failed: 500')
+  })
+})
+
+describe('submitScanFeedback', () => {
+  it('posts the rating and feedback', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'ok' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await submitScanFeedback('scan-1', 5, 'Great experience')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scans/scan-1/feedback',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ rating: 5, feedback: 'Great experience' }),
+      })
+    )
+  })
+
+  it('sends null feedback when none was given', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'ok' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await submitScanFeedback('scan-1', 4)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scans/scan-1/feedback',
+      expect.objectContaining({ body: JSON.stringify({ rating: 4, feedback: null }) })
+    )
+  })
+
+  it('throws when the backend rejects the feedback', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }))
+    await expect(submitScanFeedback('does-not-exist', 5)).rejects.toThrow('Request failed: 404')
+  })
+})
+
 describe('mock-backed functions', () => {
   it('checkOutage resolves the mock outage', async () => {
     const outage = await checkOutage()
@@ -295,8 +486,9 @@ describe('mock-backed functions', () => {
     expect(getRouterCatalog().length).toBeGreaterThan(0)
   })
 
-  it('getAnalytics resolves the mock analytics summary', async () => {
-    const analytics = await getAnalytics()
-    expect(analytics.totalScans).toBeGreaterThan(0)
+  it('getRepeatContactRate returns a plausible rate', () => {
+    const rate = getRepeatContactRate()
+    expect(rate).toBeGreaterThanOrEqual(0)
+    expect(rate).toBeLessThanOrEqual(1)
   })
 })

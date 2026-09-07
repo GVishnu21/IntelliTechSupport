@@ -44,6 +44,7 @@ export default function Diagnosis() {
     navigate('/troubleshoot', {
       state: {
         sessionId: diagnosis.sessionId,
+        scanId: diagnosis.scanId,
         step: diagnosis.firstStep,
         issue: diagnosis.issue,
         stepsCompleted: 0,
@@ -53,7 +54,7 @@ export default function Diagnosis() {
 
   function handleAlreadyFixed() {
     if (!diagnosis) return
-    navigate('/success', { state: { issue: diagnosis.issue, stepsCompleted: 0 } })
+    navigate('/success', { state: { scanId: diagnosis.scanId, issue: diagnosis.issue, stepsCompleted: 0 } })
   }
 
   if (diagnosis.lowConfidence) {

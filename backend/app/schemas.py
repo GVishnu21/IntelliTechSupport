@@ -19,6 +19,7 @@ class StepInfo(BaseModel):
 
 class DiagnosisResponse(BaseModel):
     session_id: str
+    scan_id: str
     equipment: str
     confidence: float
     status_lights: dict[str, str]
@@ -33,8 +34,18 @@ class VerifyStepResponse(BaseModel):
     status_lights: dict[str, str]
 
 
+class SkipStepRequest(BaseModel):
+    session_id: str
+
+
+class SkipStepResponse(BaseModel):
+    escalate: bool
+    next_step: Optional[StepInfo]
+
+
 class EscalateRequest(BaseModel):
     session_id: str
+    contact_phone: Optional[str] = None
 
 
 class EscalateResponse(BaseModel):
@@ -48,8 +59,36 @@ class TicketResponse(BaseModel):
     status: str
     status_lights: dict[str, str]
     history: list[dict]
+    contact_phone: Optional[str]
     created_at: datetime
 
 
 class TicketStatusUpdate(BaseModel):
     status: Literal["open", "in_progress", "resolved", "escalated"]
+
+
+class ScanFeedbackRequest(BaseModel):
+    rating: int
+    feedback: Optional[str] = None
+
+
+class TrendPointResponse(BaseModel):
+    date: str
+    value: float
+
+
+class LabeledCountResponse(BaseModel):
+    label: str
+    count: int
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    total_scans: int
+    resolution_rate: float
+    escalation_rate: float
+    avg_resolution_time: str
+    first_contact_resolution: float
+    csat: Optional[float]
+    resolution_trend: list[TrendPointResponse]
+    escalation_trend: list[TrendPointResponse]
+    top_troubleshooting_steps: list[LabeledCountResponse]

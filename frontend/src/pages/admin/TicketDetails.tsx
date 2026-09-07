@@ -73,6 +73,12 @@ export default function AdminTicketDetails() {
           <div>
             <p className="text-sm text-text-secondary">Customer</p>
             <p className="text-base font-medium text-text">{ticket.customer}</p>
+            {ticket.contactPhone && (
+              <>
+                <p className="mt-2 text-sm text-text-secondary">Callback number</p>
+                <p className="text-base font-medium text-text">{ticket.contactPhone}</p>
+              </>
+            )}
             <p className="mt-2 text-sm text-text-secondary">Router</p>
             <p className="text-base font-medium text-text">{ticket.router}</p>
           </div>
@@ -102,12 +108,23 @@ export default function AdminTicketDetails() {
         {actionError && <ErrorState title={actionError} inline />}
 
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="flex min-h-11 items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-primary hover:bg-slate-50"
-          >
-            Contact Customer
-          </button>
+          {ticket.contactPhone ? (
+            <a
+              href={`tel:${ticket.contactPhone}`}
+              className="flex min-h-11 items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-primary hover:bg-slate-50"
+            >
+              Contact Customer
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="No callback number was provided for this ticket"
+              className="flex min-h-11 cursor-not-allowed items-center justify-center rounded-lg border border-border bg-transparent px-6 text-base font-semibold text-text-secondary opacity-50"
+            >
+              Contact Customer
+            </button>
+          )}
           <button
             type="button"
             onClick={() => handleUpdateStatus('resolved', 'resolve')}

@@ -4,14 +4,28 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CONFIDENCE_THRESHOLD
-from app.db import create_ticket, get_ticket, init_db, list_tickets, update_ticket_status
-from app.orchestration.engine import get_session, start_session, verify_step
+from app.db import (
+    create_scan,
+    create_ticket,
+    get_scans_summary,
+    get_ticket,
+    init_db,
+    list_tickets,
+    update_scan_feedback,
+    update_scan_outcome,
+    update_ticket_status,
+)
+from app.orchestration.engine import get_session, skip_step, start_session, verify_step
 from app.orchestration.playbooks import EQUIPMENT_CATALOG
 from app.schemas import (
+    AnalyticsSummaryResponse,
     DiagnosisResponse,
     EscalateRequest,
     EscalateResponse,
     ImageRequest,
+    ScanFeedbackRequest,
+    SkipStepRequest,
+    SkipStepResponse,
     StepInfo,
     TicketResponse,
     TicketStatusUpdate,
@@ -31,6 +45,12 @@ app.add_middleware(
 init_db()
 
 
+def _format_duration(seconds: float) -> str:
+    total = int(round(seconds))
+    minutes, secs = divmod(total, 60)
+    return f"{minutes}m {secs}s"
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -43,8 +63,14 @@ def diagnose(payload: ImageRequest) -> DiagnosisResponse:
 
     recognized = reading.equipment in EQUIPMENT_CATALOG
     if not recognized or reading.confidence < CONFIDENCE_THRESHOLD:
+        # Still a real scan for metrics purposes -- a customer pointed their
+        # camera at something and we couldn't use it. No session exists to
+        # attach it to, so it gets its own id and a null session_id.
+        scan_id = str(uuid.uuid4())
+        create_scan(scan_id=scan_id, session_id=None, equipment=reading.equipment, outcome="unrecognized")
         return DiagnosisResponse(
             session_id="",
+            scan_id=scan_id,
             equipment=reading.equipment,
             confidence=reading.confidence,
             status_lights=reading.status_lights,
@@ -53,6 +79,14 @@ def diagnose(payload: ImageRequest) -> DiagnosisResponse:
         )
 
     session, first_step = start_session(reading)
+    # The scan and the session are the same thing once one exists, so reuse
+    # session.id rather than minting a second id for the same real-world event.
+    create_scan(
+        scan_id=session.id,
+        session_id=session.id,
+        equipment=reading.equipment,
+        outcome="resolved" if not first_step else "in_progress",
+    )
     next_step = (
         StepInfo(
             instruction=first_step["instruction"],
@@ -67,6 +101,7 @@ def diagnose(payload: ImageRequest) -> DiagnosisResponse:
 
     return DiagnosisResponse(
         session_id=session.id,
+        scan_id=session.id,
         equipment=reading.equipment,
         confidence=reading.confidence,
         status_lights=reading.status_lights,
@@ -85,6 +120,15 @@ def verify(payload: ImageRequest) -> VerifyStepResponse:
 
     resolved, should_escalate, next_step_data = verify_step(payload.session_id, reading)
     session = get_session(payload.session_id)
+
+    if session and (resolved or should_escalate):
+        update_scan_outcome(
+            session_id=payload.session_id,
+            outcome="resolved" if resolved else "escalated",
+            steps_completed=len(session.history),
+            history=session.history,
+        )
+
     step_number = (session.step_index + 1) if (session and next_step_data) else 0
     next_step = (
         StepInfo(
@@ -106,6 +150,35 @@ def verify(payload: ImageRequest) -> VerifyStepResponse:
     )
 
 
+@app.post("/skip-step", response_model=SkipStepResponse)
+def skip(payload: SkipStepRequest) -> SkipStepResponse:
+    session = get_session(payload.session_id)
+    should_escalate, next_step_data = skip_step(payload.session_id)
+
+    if session and should_escalate:
+        update_scan_outcome(
+            session_id=payload.session_id,
+            outcome="escalated",
+            steps_completed=len(session.history),
+            history=session.history,
+        )
+
+    step_number = (session.step_index + 1) if (session and next_step_data) else 0
+    next_step = (
+        StepInfo(
+            instruction=next_step_data["instruction"],
+            step_number=step_number,
+            total_steps=len(session.steps) if session else 0,
+            checklist=next_step_data.get("checklist", []),
+            note=next_step_data.get("note"),
+        )
+        if next_step_data
+        else None
+    )
+
+    return SkipStepResponse(escalate=should_escalate, next_step=next_step)
+
+
 @app.post("/escalate", response_model=EscalateResponse)
 def escalate(payload: EscalateRequest) -> EscalateResponse:
     session = get_session(payload.session_id)
@@ -122,6 +195,7 @@ def escalate(payload: EscalateRequest) -> EscalateResponse:
         equipment=session.equipment if session else "unknown",
         status_lights=session.last_status_lights if session else {},
         history=session.history if session else [],
+        contact_phone=payload.contact_phone,
     )
 
     return EscalateResponse(ticket_id=ticket_id)
@@ -146,3 +220,28 @@ def patch_ticket_status(ticket_id: str, payload: TicketStatusUpdate) -> TicketRe
     if row is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return TicketResponse(**row)
+
+
+@app.post("/scans/{scan_id}/feedback")
+def submit_scan_feedback(scan_id: str, payload: ScanFeedbackRequest) -> dict:
+    row = update_scan_feedback(scan_id, payload.rating, payload.feedback)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    return {"status": "ok"}
+
+
+@app.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
+def analytics_summary() -> AnalyticsSummaryResponse:
+    summary = get_scans_summary()
+    avg_seconds = summary["avg_resolution_time_seconds"]
+    return AnalyticsSummaryResponse(
+        total_scans=summary["total_scans"],
+        resolution_rate=summary["resolution_rate"],
+        escalation_rate=summary["escalation_rate"],
+        avg_resolution_time=_format_duration(avg_seconds) if avg_seconds is not None else "—",
+        first_contact_resolution=summary["first_contact_resolution"],
+        csat=summary["csat"],
+        resolution_trend=summary["resolution_trend"],
+        escalation_trend=summary["escalation_trend"],
+        top_troubleshooting_steps=summary["top_troubleshooting_steps"],
+    )

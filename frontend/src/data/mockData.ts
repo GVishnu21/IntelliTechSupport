@@ -1,20 +1,4 @@
-import type { AnalyticsSummary, OutageInfo, RouterCatalogEntry, RouterDiagnosis, TrendPoint } from '../types'
-
-const ANALYTICS_ANCHOR_DATE = '2026-09-04T00:00:00Z'
-
-// Deterministic (no Math.random) so the numbers are stable across runs/tests
-// while still varying enough to look like a real trend line when plotted.
-function generateTrend(days: number, base: number, amplitude: number): TrendPoint[] {
-  const anchor = new Date(ANALYTICS_ANCHOR_DATE)
-  const points: TrendPoint[] = []
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(anchor)
-    date.setUTCDate(date.getUTCDate() - i)
-    const value = Math.min(1, Math.max(0, base + Math.sin(i / 5) * amplitude))
-    points.push({ date: date.toISOString().slice(0, 10), value: Number(value.toFixed(2)) })
-  }
-  return points
-}
+import type { OutageInfo, RouterCatalogEntry, RouterDiagnosis } from '../types'
 
 export const MOCK_OUTAGE: OutageInfo = {
   active: false,
@@ -36,7 +20,8 @@ export const ROUTER_CATALOG: RouterCatalogEntry[] = [
 // is no photo to run through the real vision pipeline. The resulting
 // sessionId is not a real backend session — if the customer proceeds through
 // Troubleshoot to Verify, the real /verify-step endpoint won't recognize it
-// and will correctly escalate rather than fake a resolution.
+// and will correctly escalate rather than fake a resolution. No scanId either
+// -- nothing to attach post-resolution feedback to since no real scan happened.
 export function mockDiagnosisForRouter(entry: RouterCatalogEntry): RouterDiagnosis {
   return {
     sessionId: `manual-${entry.id}-${Date.now()}`,
@@ -60,40 +45,6 @@ export function mockDiagnosisForRouter(entry: RouterCatalogEntry): RouterDiagnos
   }
 }
 
-export const MOCK_ANALYTICS: AnalyticsSummary = {
-  totalScans: 1248,
-  resolutionRate: 0.72,
-  escalationRate: 0.18,
-  avgResolutionTime: '4m 32s',
-  firstContactResolution: 0.68,
-  repeatContactRate: 0.09,
-  csat: 4.4,
-  // 90 days generated so the Analytics date filter (7/30/90) has real data to
-  // slice into, rather than a filter control that can't actually change anything.
-  resolutionTrend: generateTrend(90, 0.72, 0.06),
-  escalationTrend: generateTrend(90, 0.18, 0.04),
-  commonIssues: [
-    { label: 'LOS / Fiber signal', count: 412 },
-    { label: 'Internet disconnected', count: 298 },
-    { label: 'Wi-Fi disabled', count: 187 },
-    { label: 'Power issue', count: 94 },
-  ],
-  commonRouterModels: [
-    { label: 'Nokia G-2425G', count: 356 },
-    { label: 'Huawei HG8145V5', count: 241 },
-    { label: 'TP-Link Archer C6', count: 189 },
-    { label: 'Netgear Nighthawk R7000', count: 122 },
-  ],
-  commonLedPatterns: [
-    { label: 'LOS blinking red', count: 356 },
-    { label: 'Internet light off', count: 241 },
-    { label: 'Wi-Fi light off', count: 158 },
-    { label: 'Power light off', count: 62 },
-  ],
-  topTroubleshootingSteps: [
-    { label: 'Restart the router', count: 812 },
-    { label: 'Check the cable connection', count: 341 },
-    { label: 'Wait two minutes and recheck', count: 178 },
-    { label: 'Reset Wi-Fi', count: 94 },
-  ],
-}
+// The only admin metric left with no real data source: detecting "the same
+// customer contacted us again" needs an identity, and there's no login.
+export const MOCK_REPEAT_CONTACT_RATE = 0.09

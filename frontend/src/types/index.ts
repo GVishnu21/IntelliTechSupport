@@ -12,6 +12,9 @@ export type DetectionConfidence = 'high' | 'medium' | 'low'
 
 export interface RouterDiagnosis {
   sessionId: string
+  // Undefined only for the manual-router-selection mock path, which never
+  // calls the real backend and so has no real scan to attach feedback to.
+  scanId?: string
   manufacturer: string
   model: string
   confidence: DetectionConfidence
@@ -60,6 +63,10 @@ export interface SupportTicket {
   ledStatus: LedReading[]
   history: TroubleshootingHistoryItem[]
   aiDiagnosis: string
+  // Optional -- captured only if the customer chose to leave a callback
+  // number when escalating. There's no login, so this is the only real
+  // contact info a ticket can ever have.
+  contactPhone?: string
 }
 
 export interface RouterCatalogEntry {
@@ -79,18 +86,18 @@ export interface LabeledCount {
   count: number
 }
 
+// Real, computed server-side from the scans table (every /diagnose call,
+// not just escalations) -- see services/api.ts's getAnalyticsSummary().
+// repeatContactRate isn't here: there's no login, so "the same customer
+// contacted us again" can't be detected -- it stays a separate mock value.
 export interface AnalyticsSummary {
   totalScans: number
   resolutionRate: number
   escalationRate: number
   avgResolutionTime: string
   firstContactResolution: number
-  repeatContactRate: number
-  csat: number
+  csat: number | null
   resolutionTrend: TrendPoint[]
   escalationTrend: TrendPoint[]
-  commonIssues: LabeledCount[]
-  commonRouterModels: LabeledCount[]
-  commonLedPatterns: LabeledCount[]
   topTroubleshootingSteps: LabeledCount[]
 }

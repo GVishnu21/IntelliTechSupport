@@ -1,13 +1,36 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { CircleHelp, Router } from 'lucide-react'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
 import { BUTTON_PRIMARY_CLASS, BUTTON_SECONDARY_CLASS } from '../components/ui/buttonStyles'
+import { loadActiveSession } from '../utils/sessionContinuity'
 
 export default function Home() {
+  const navigate = useNavigate()
+  const [activeSession] = useState(() => loadActiveSession())
+
+  function handleContinue() {
+    if (!activeSession) return
+    navigate('/troubleshoot', {
+      state: {
+        sessionId: activeSession.sessionId,
+        scanId: activeSession.scanId,
+        step: activeSession.step,
+        issue: activeSession.issue,
+        stepsCompleted: activeSession.stepsCompleted,
+      },
+    })
+  }
+
   return (
     <CustomerLayout
       rightAction={
-        <button type="button" aria-label="Help" className="flex min-h-11 min-w-11 items-center justify-center">
+        <button
+          type="button"
+          aria-label="Help"
+          onClick={() => navigate('/faq')}
+          className="flex min-h-11 min-w-11 items-center justify-center"
+        >
           <CircleHelp size={22} className="text-text-secondary" />
         </button>
       }
@@ -39,15 +62,24 @@ export default function Home() {
       </div>
 
       <div className="space-y-4 border-t border-border pt-4 text-center">
-        <div>
-          <p className="text-sm text-text-secondary">Already started troubleshooting?</p>
-          <Link to="/troubleshoot" className="text-sm font-medium text-primary underline">
-            Continue previous session
-          </Link>
-        </div>
+        {activeSession && (
+          <div>
+            <p className="text-sm text-text-secondary">
+              Already started troubleshooting? Step {activeSession.step.stepNumber} of{' '}
+              {activeSession.step.totalSteps}
+            </p>
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="text-sm font-medium text-primary underline"
+            >
+              Continue previous session
+            </button>
+          </div>
+        )}
         <div>
           <p className="text-sm text-text-secondary">Need help?</p>
-          <button type="button" className="text-sm font-medium text-primary underline">
+          <button type="button" onClick={() => navigate('/faq')} className="text-sm font-medium text-primary underline">
             View common internet issues
           </button>
         </div>

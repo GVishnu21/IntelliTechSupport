@@ -10,7 +10,7 @@ import type {
   VerifyResult,
 } from '../types'
 import { parseLedReadings } from '../utils/led'
-import { MOCK_ANALYTICS, MOCK_OUTAGE, ROUTER_CATALOG, mockDiagnosisForRouter } from '../data/mockData'
+import { MOCK_OUTAGE, MOCK_REPEAT_CONTACT_RATE, ROUTER_CATALOG, mockDiagnosisForRouter } from '../data/mockData'
 
 interface BackendStepInfo {
   instruction: string
@@ -22,6 +22,7 @@ interface BackendStepInfo {
 
 interface BackendDiagnosisResponse {
   session_id: string
+  scan_id: string
   equipment: string
   confidence: number
   status_lights: Record<string, string>
@@ -43,7 +44,25 @@ interface BackendTicket {
   status: string
   status_lights: Record<string, string>
   history: Array<{ step: string; outcome: 'completed' | 'failed' | 'skipped' }>
+  contact_phone: string | null
   created_at: string
+}
+
+interface BackendSkipStepResponse {
+  escalate: boolean
+  next_step: BackendStepInfo | null
+}
+
+interface BackendAnalyticsSummary {
+  total_scans: number
+  resolution_rate: number
+  escalation_rate: number
+  avg_resolution_time: string
+  first_contact_resolution: number
+  csat: number | null
+  resolution_trend: Array<{ date: string; value: number }>
+  escalation_trend: Array<{ date: string; value: number }>
+  top_troubleshooting_steps: Array<{ label: string; count: number }>
 }
 
 function toConfidenceLevel(value: number): DetectionConfidence {
@@ -107,6 +126,21 @@ function toSupportTicket(raw: BackendTicket): SupportTicket {
     ledStatus: parseLedReadings(raw.status_lights),
     history: raw.history,
     aiDiagnosis: issue,
+    contactPhone: raw.contact_phone ?? undefined,
+  }
+}
+
+function toAnalyticsSummary(raw: BackendAnalyticsSummary): AnalyticsSummary {
+  return {
+    totalScans: raw.total_scans,
+    resolutionRate: raw.resolution_rate,
+    escalationRate: raw.escalation_rate,
+    avgResolutionTime: raw.avg_resolution_time,
+    firstContactResolution: raw.first_contact_resolution,
+    csat: raw.csat,
+    resolutionTrend: raw.resolution_trend,
+    escalationTrend: raw.escalation_trend,
+    topTroubleshootingSteps: raw.top_troubleshooting_steps,
   }
 }
 
@@ -114,6 +148,7 @@ function toDiagnosis(res: BackendDiagnosisResponse): RouterDiagnosis {
   const { manufacturer, model } = splitEquipmentName(res.equipment)
   return {
     sessionId: res.session_id,
+    scanId: res.scan_id,
     manufacturer,
     model,
     confidence: toConfidenceLevel(res.confidence),
@@ -153,9 +188,17 @@ export async function verifyStepWithPhoto(sessionId: string, imageBase64: string
   }
 }
 
-export async function escalate(sessionId: string): Promise<{ ticketId: string }> {
-  const res = await postJson<{ ticket_id: string }>('/escalate', { session_id: sessionId })
+export async function escalate(sessionId: string, contactPhone?: string): Promise<{ ticketId: string }> {
+  const res = await postJson<{ ticket_id: string }>('/escalate', {
+    session_id: sessionId,
+    contact_phone: contactPhone || null,
+  })
   return { ticketId: res.ticket_id }
+}
+
+export async function skipStep(sessionId: string): Promise<{ escalate: boolean; nextStep: TroubleshootingStep | null }> {
+  const res = await postJson<BackendSkipStepResponse>('/skip-step', { session_id: sessionId })
+  return { escalate: res.escalate, nextStep: toStep(res.next_step) }
 }
 
 export async function getTickets(): Promise<SupportTicket[]> {
@@ -192,8 +235,28 @@ export async function updateTicketStatus(id: string, status: TicketStatus): Prom
   return toSupportTicket(raw)
 }
 
-// No backend support for outages, the router catalog, or the admin analytics
-// surface yet — the following are all mock-backed.
+export async function submitScanFeedback(scanId: string, rating: number, feedback?: string): Promise<void> {
+  const res = await fetch(`/api/scans/${scanId}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, feedback: feedback || null }),
+  })
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+}
+
+export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
+  const res = await fetch('/api/analytics/summary')
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const raw = (await res.json()) as BackendAnalyticsSummary
+  return toAnalyticsSummary(raw)
+}
+
+// No backend support for outages, the router catalog, or repeat-contact
+// detection (needs a login we don't have) -- the following are mock-backed.
 
 export async function checkOutage(): Promise<OutageInfo> {
   return MOCK_OUTAGE
@@ -207,6 +270,6 @@ export function getMockDiagnosis(entry: RouterCatalogEntry): RouterDiagnosis {
   return mockDiagnosisForRouter(entry)
 }
 
-export async function getAnalytics(): Promise<AnalyticsSummary> {
-  return MOCK_ANALYTICS
+export function getRepeatContactRate(): number {
+  return MOCK_REPEAT_CONTACT_RATE
 }
