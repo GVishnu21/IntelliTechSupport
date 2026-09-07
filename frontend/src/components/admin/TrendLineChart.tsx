@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { TrendPoint } from '../../types'
 
@@ -7,19 +7,43 @@ interface TrendLineChartProps {
   data: TrendPoint[]
   color: string
   valueFormatter?: (value: number) => string
+  badge?: ReactNode
+  emptyMessage?: string
 }
 
 const defaultFormatter = (value: number) => `${Math.round(value * 100)}%`
 
-export function TrendLineChart({ title, data, color, valueFormatter = defaultFormatter }: TrendLineChartProps) {
+export function TrendLineChart({
+  title,
+  data,
+  color,
+  valueFormatter = defaultFormatter,
+  badge,
+  emptyMessage,
+}: TrendLineChartProps) {
   const [showTable, setShowTable] = useState(false)
   const panelId = useId()
   const latest = data[data.length - 1]
 
+  if (data.length === 0 && emptyMessage) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <h3 className="text-lg font-bold text-text">
+          {title}
+          {badge}
+        </h3>
+        <p className="py-8 text-center text-text-secondary">{emptyMessage}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-lg font-bold text-text">{title}</h3>
+        <h3 className="text-lg font-bold text-text">
+          {title}
+          {badge}
+        </h3>
         <button
           type="button"
           onClick={() => setShowTable((value) => !value)}
@@ -68,7 +92,7 @@ export function TrendLineChart({ title, data, color, valueFormatter = defaultFor
                 minTickGap={32}
               />
               <YAxis
-                tickFormatter={(value: number) => `${Math.round(value * 100)}%`}
+                tickFormatter={(value: number) => valueFormatter(value)}
                 tick={{ fontSize: 12, fill: '#64748B' }}
                 tickLine={false}
                 axisLine={false}

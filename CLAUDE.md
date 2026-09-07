@@ -110,6 +110,15 @@ groups, commented accordingly:
   aggregates, so these read from `src/data/mockData.ts`. When adding backend support for one of
   these later, only `api.ts` needs to change — page components never know the difference.
 
+`admin/Dashboard.tsx` and `admin/Analytics.tsx` mix both sources on the same page, chart by chart
+— common issues/router models/LED patterns and the escalation trend are computed for real from
+`getTickets()` via `src/utils/ticketStats.ts` (pure `deriveX()` functions, easy to unit test
+without a live DB), marked with a `LiveBadge`; the metric tiles (total scans, resolution rate,
+CSAT, etc.) and the resolution trend stay on `getAnalytics()`'s mock data because nothing persists
+successful (non-escalated) sessions yet, so there's no real denominator to compute a rate from.
+Unmarked numbers are demo data — don't assume a number without a `LiveBadge` is real just because
+it sits next to one that is.
+
 There's no global state store. Flow state (the diagnosis, the current troubleshooting step, the
 session id, steps-completed count) is threaded page-to-page via React Router's navigation state
 (`navigate(path, { state })` / `useLocation().state`), following the route graph
