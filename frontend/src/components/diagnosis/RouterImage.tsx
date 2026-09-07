@@ -8,7 +8,7 @@ export function RouterImage({ src, alt }: { src?: string; alt: string }) {
     <div
       role="img"
       aria-label={alt}
-      className="flex h-32 w-32 items-center justify-center rounded-xl border border-border bg-slate-50"
+      className="flex h-32 w-32 items-center justify-center rounded-xl border border-border bg-slate-50 dark:bg-slate-800"
     >
       <Router size={48} className="text-text-secondary" aria-hidden="true" />
     </div>

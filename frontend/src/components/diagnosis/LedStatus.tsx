@@ -5,7 +5,7 @@ const DOT_COLOR: Record<LedReading['color'], string> = {
   green: 'bg-success',
   red: 'bg-error',
   amber: 'bg-warning',
-  gray: 'bg-slate-300',
+  gray: 'bg-slate-300 dark:bg-slate-600',
 }
 
 export function LedStatus({ light }: { light: LedReading }) {

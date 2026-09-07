@@ -5,6 +5,14 @@ interface CameraCaptureProps {
   busy: boolean
   prompt: string
   onError?: (message: string) => void
+  // The photo currently being processed, as a data URL -- shown frozen in
+  // place of the live feed while `busy` is true. Owned by the parent (not
+  // this component's own capture()) because a photo can also arrive via a
+  // separate upload button the parent renders alongside this one; deriving
+  // it internally only from capture() would leave the live feed showing (or
+  // a stale frame from an earlier live capture) whenever the photo actually
+  // came from an upload instead.
+  frozenImage?: string | null
 }
 
 export default function CameraCapture({
@@ -12,6 +20,7 @@ export default function CameraCapture({
   busy,
   prompt,
   onError,
+  frozenImage,
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -19,7 +28,6 @@ export default function CameraCapture({
 
   const [error, setError] = useState<string | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null)
 
   // Only startup-phase errors (camera never became ready) mean the customer
   // has no working camera at all — surface those to the parent so it can
@@ -33,10 +41,10 @@ export default function CameraCapture({
   }, [error, cameraReady, onError])
 
   // If a request fails, `busy` goes back to false while this component stays
-  // mounted (same screen) -- derived (not stored) so the freeze-frame drops
-  // the moment `busy` clears, showing the live feed again for a retake,
-  // instead of being stuck looking at the photo that just failed.
-  const showFrozenFrame = capturedImage !== null && busy
+  // mounted (same screen) -- the freeze-frame drops the moment `busy`
+  // clears, showing the live feed again for a retake, instead of being
+  // stuck looking at the photo that just failed.
+  const showFrozenFrame = Boolean(frozenImage) && busy
 
   useEffect(() => {
     let cancelled = false
@@ -191,7 +199,6 @@ export default function CameraCapture({
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
     const base64 = dataUrl.split(',')[1]
 
-    setCapturedImage(dataUrl)
     onCapture(base64)
   }
 
@@ -223,7 +230,7 @@ export default function CameraCapture({
 
         {showFrozenFrame && (
           <img
-            src={capturedImage}
+            src={frozenImage ?? undefined}
             alt="Captured equipment"
             className="absolute inset-0 aspect-[3/4] w-full rounded-lg object-cover"
           />

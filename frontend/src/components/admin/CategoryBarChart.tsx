@@ -1,18 +1,34 @@
 import { useId, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useAdminTheme } from '../layout/AdminThemeContext'
 import type { LabeledCount } from '../../types'
 
 interface CategoryBarChartProps {
   title: string
   data: LabeledCount[]
   color?: string
+  // See TrendLineChart's darkColor for why this can't be derived automatically.
+  darkColor?: string
   emptyMessage?: string
 }
 
-export function CategoryBarChart({ title, data, color = '#2563EB', emptyMessage }: CategoryBarChartProps) {
+export function CategoryBarChart({ title, data, color, darkColor, emptyMessage }: CategoryBarChartProps) {
+  const { dark } = useAdminTheme()
   const [showTable, setShowTable] = useState(false)
   const panelId = useId()
   const sorted = [...data].sort((a, b) => b.count - a.count)
+  const lightColor = color ?? '#2563EB'
+  const barColor = dark ? (darkColor ?? color ?? '#3B82F6') : lightColor
+  const gridColor = dark ? '#334155' : '#E2E8F0'
+  const axisTickColor = dark ? '#94A3B8' : '#64748B'
+  const categoryTickColor = dark ? '#F1F5F9' : '#0F172A'
+  const tooltipStyle = {
+    borderRadius: 8,
+    borderColor: gridColor,
+    fontSize: 13,
+    backgroundColor: dark ? '#1E293B' : '#FFFFFF',
+    color: dark ? '#F1F5F9' : '#0F172A',
+  }
 
   if (sorted.length === 0 && emptyMessage) {
     return (
@@ -64,18 +80,23 @@ export function CategoryBarChart({ title, data, color = '#2563EB', emptyMessage 
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={sorted} layout="vertical" margin={{ top: 4, right: 24, left: 4, bottom: 4 }}>
-              <CartesianGrid stroke="#E2E8F0" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#E2E8F0' }} />
+              <CartesianGrid stroke={gridColor} horizontal={false} />
+              <XAxis
+                type="number"
+                tick={{ fontSize: 12, fill: axisTickColor }}
+                tickLine={false}
+                axisLine={{ stroke: gridColor }}
+              />
               <YAxis
                 type="category"
                 dataKey="label"
-                tick={{ fontSize: 12, fill: '#0F172A' }}
+                tick={{ fontSize: 12, fill: categoryTickColor }}
                 tickLine={false}
                 axisLine={false}
                 width={140}
               />
-              <Tooltip contentStyle={{ borderRadius: 8, borderColor: '#E2E8F0', fontSize: 13 }} />
-              <Bar dataKey="count" fill={color} radius={[0, 4, 4, 0]} maxBarSize={28} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="count" fill={barColor} radius={[0, 4, 4, 0]} maxBarSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -25,6 +25,7 @@ export default function Verify() {
   const [error, setError] = useState<string | null>(null)
   const [cameraError, setCameraError] = useState(false)
   const [cameraKey, setCameraKey] = useState(0)
+  const [frozenImage, setFrozenImage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!sessionId || !step) {
@@ -42,6 +43,7 @@ export default function Verify() {
   }
 
   async function handleCapture(imageBase64: string) {
+    setFrozenImage(`data:image/jpeg;base64,${imageBase64}`)
     setBusy(true)
     setError(null)
     try {
@@ -103,6 +105,7 @@ export default function Verify() {
               prompt="Take another photo so we can check it worked"
               onCapture={handleCapture}
               onError={() => setCameraError(true)}
+              frozenImage={frozenImage}
             />
             <PhotoUploadButton
               onUpload={handleCapture}

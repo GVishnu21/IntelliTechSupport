@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { getAnalyticsSummary, getRepeatContactRate, getTickets } from '../../services/api'
+import { AdminLayout } from '../../components/layout/AdminLayout'
+import { AdminHeaderActions } from '../../components/layout/AdminHeaderActions'
 import { TrendLineChart } from '../../components/admin/TrendLineChart'
 import { CategoryBarChart } from '../../components/admin/CategoryBarChart'
 import { DateRangeFilter, type DateRangeOption } from '../../components/admin/DateRangeFilter'
@@ -33,7 +34,11 @@ export default function AdminAnalytics() {
   const commonLedPatterns = useMemo(() => deriveCommonLedPatterns(tickets ?? []), [tickets])
 
   if (!analytics || !tickets) {
-    return <LoadingState />
+    return (
+      <AdminLayout>
+        <LoadingState />
+      </AdminLayout>
+    )
   }
 
   const repeatContactRate = getRepeatContactRate()
@@ -48,68 +53,70 @@ export default function AdminAnalytics() {
   ]
 
   return (
-    <div className="mx-auto max-w-5xl p-6 md:p-8">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text">Analytics</h1>
-        <Link to="/admin" className="text-sm font-medium text-primary">
-          Back to Dashboard
-        </Link>
-      </header>
+    <AdminLayout>
+      <div className="p-6 md:p-8">
+        <header className="mb-6 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold text-text">Analytics</h1>
+          <AdminHeaderActions />
+        </header>
 
-      <div className="mb-2 grid grid-cols-2 gap-4 lg:grid-cols-3">
-        {stats.map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-sm text-text-secondary">{label}</p>
-            <p className="mt-1 text-2xl font-bold text-text">{value}</p>
-          </div>
-        ))}
-      </div>
-      <p className="mb-6 text-sm text-text-secondary">
-        Repeat Contact Rate is illustrative demo data — detecting a returning customer requires an
-        identity, and this app has no login. Every other stat and chart below is computed from real
-        scans and tickets.
-      </p>
+        <div className="mb-2 grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {stats.map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <p className="text-sm text-text-secondary">{label}</p>
+              <p className="mt-1 text-2xl font-bold text-text">{value}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mb-6 text-sm text-text-secondary">
+          Repeat Contact Rate is illustrative demo data — detecting a returning customer requires an
+          identity, and this app has no login. Every other stat and chart below is computed from real
+          scans and tickets.
+        </p>
 
-      <div className="mb-4">
-        <DateRangeFilter
-          value={range}
-          onChange={setRange}
-          customStart={customStart}
-          customEnd={customEnd}
-          onCustomStartChange={setCustomStart}
-          onCustomEndChange={setCustomEnd}
-        />
-      </div>
+        <div className="mb-4">
+          <DateRangeFilter
+            value={range}
+            onChange={setRange}
+            customStart={customStart}
+            customEnd={customEnd}
+            onCustomStartChange={setCustomStart}
+            onCustomEndChange={setCustomEnd}
+          />
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <TrendLineChart
-          title="Resolution trend"
-          data={resolutionTrend}
-          color="#16A34A"
-          emptyMessage="No concluded scans yet — this fills in once customers finish troubleshooting."
-        />
-        <TrendLineChart
-          title="Escalation trend"
-          data={escalationTrend}
-          color="#D97706"
-          emptyMessage="No concluded scans yet — this fills in once customers finish troubleshooting."
-        />
-        <CategoryBarChart
-          title="Common router problems"
-          data={commonIssues}
-          emptyMessage="No escalations yet — common problems will appear here once they happen."
-        />
-        <CategoryBarChart
-          title="Most common LED patterns"
-          data={commonLedPatterns}
-          emptyMessage="No escalations yet — LED patterns will appear here once they happen."
-        />
-        <CategoryBarChart
-          title="Most successful troubleshooting steps"
-          data={analytics.topTroubleshootingSteps}
-          emptyMessage="No resolved scans yet — successful steps will appear here once customers finish troubleshooting."
-        />
+        <div className="grid gap-4 md:grid-cols-2">
+          <TrendLineChart
+            title="Resolution trend"
+            data={resolutionTrend}
+            color="#16A34A"
+            darkColor="#22C55E"
+            emptyMessage="No concluded scans yet — this fills in once customers finish troubleshooting."
+          />
+          <TrendLineChart
+            title="Escalation trend"
+            data={escalationTrend}
+            color="#D97706"
+            darkColor="#F59E0B"
+            emptyMessage="No concluded scans yet — this fills in once customers finish troubleshooting."
+          />
+          <CategoryBarChart
+            title="Common router problems"
+            data={commonIssues}
+            emptyMessage="No escalations yet — common problems will appear here once they happen."
+          />
+          <CategoryBarChart
+            title="Most common LED patterns"
+            data={commonLedPatterns}
+            emptyMessage="No escalations yet — LED patterns will appear here once they happen."
+          />
+          <CategoryBarChart
+            title="Most successful troubleshooting steps"
+            data={analytics.topTroubleshootingSteps}
+            emptyMessage="No resolved scans yet — successful steps will appear here once customers finish troubleshooting."
+          />
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterTrend } from './trend'
+import { computeTrendChange, filterTrend } from './trend'
 import type { TrendPoint } from '../types'
 
 const trend: TrendPoint[] = Array.from({ length: 10 }, (_, i) => ({
@@ -25,5 +25,37 @@ describe('filterTrend', () => {
 
   it('falls back to the full trend when custom dates are incomplete', () => {
     expect(filterTrend(trend, 'custom', '', '')).toHaveLength(10)
+  })
+})
+
+describe('computeTrendChange', () => {
+  it('returns null when there are fewer than 2 points', () => {
+    expect(computeTrendChange([])).toBeNull()
+    expect(computeTrendChange([{ date: '2026-08-01', value: 0.5 }])).toBeNull()
+  })
+
+  it('reports an upward direction and the delta in percentage points', () => {
+    const result = computeTrendChange([
+      { date: '2026-08-01', value: 0.5 },
+      { date: '2026-08-02', value: 0.6 },
+      { date: '2026-08-03', value: 0.75 },
+    ])
+    expect(result).toEqual({ direction: 'up', deltaPercentagePoints: 25 })
+  })
+
+  it('reports a downward direction', () => {
+    const result = computeTrendChange([
+      { date: '2026-08-01', value: 0.8 },
+      { date: '2026-08-02', value: 0.6 },
+    ])
+    expect(result).toEqual({ direction: 'down', deltaPercentagePoints: -20 })
+  })
+
+  it('reports flat when the change is negligible', () => {
+    const result = computeTrendChange([
+      { date: '2026-08-01', value: 0.5 },
+      { date: '2026-08-02', value: 0.502 },
+    ])
+    expect(result?.direction).toBe('flat')
   })
 })
