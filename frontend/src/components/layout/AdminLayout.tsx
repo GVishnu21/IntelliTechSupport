@@ -1,6 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
-import { BarChart3, ChevronsLeft, ChevronsRight, LayoutDashboard, Router as RouterIcon, Ticket } from 'lucide-react'
+import {
+  BarChart3,
+  ChevronsLeft,
+  ChevronsRight,
+  LayoutDashboard,
+  Router as RouterIcon,
+  Star,
+  Ticket,
+} from 'lucide-react'
 import { AdminThemeContext } from './AdminThemeContext'
 
 interface AdminLayoutProps {
@@ -10,6 +18,7 @@ interface AdminLayoutProps {
 const NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/tickets', label: 'Support Tickets', icon: Ticket, end: false },
+  { to: '/admin/feedback', label: 'Feedback', icon: Star, end: false },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, end: true },
 ]
 

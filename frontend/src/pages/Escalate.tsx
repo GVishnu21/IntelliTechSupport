@@ -5,7 +5,7 @@ import { CustomerLayout } from '../components/layout/CustomerLayout'
 import { Button } from '../components/ui/Button'
 import { SecondaryButton } from '../components/ui/SecondaryButton'
 import { ErrorState } from '../components/ui/ErrorState'
-import { escalate } from '../services/api'
+import { escalate, sendEscalationOtp, verifyEscalationOtp } from '../services/api'
 import { clearActiveSession } from '../utils/sessionContinuity'
 
 interface EscalateLocationState {
@@ -24,18 +24,75 @@ export default function Escalate() {
   const [ticketId, setTicketId] = useState<string | null>(null)
   const [phone, setPhone] = useState('')
 
+  // Optional identity verification (PRD IT-5) -- never blocks Contact
+  // Support, it just lets the ticket carry a verified phone when the
+  // customer chooses to confirm it.
+  const [otpStage, setOtpStage] = useState<'idle' | 'sent' | 'verified'>('idle')
+  const [otpCode, setOtpCode] = useState('')
+  const [otpBusy, setOtpBusy] = useState(false)
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [verifiedToken, setVerifiedToken] = useState<string | null>(null)
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null)
+
   useEffect(() => {
     // Reaching Escalate means troubleshooting is over -- nothing left to
     // "continue," whether or not the customer has clicked Contact Support yet.
     clearActiveSession()
   }, [])
 
+  // A verified code only applies to the exact number it was verified for --
+  // editing the phone field after verifying invalidates it.
+  function handlePhoneChange(value: string) {
+    setPhone(value)
+    if (otpStage !== 'idle') {
+      setOtpStage('idle')
+      setOtpCode('')
+      setOtpError(null)
+      setVerifiedToken(null)
+      setVerifiedPhone(null)
+    }
+  }
+
+  async function handleSendCode() {
+    const trimmed = phone.trim()
+    if (!trimmed) return
+    setOtpBusy(true)
+    setOtpError(null)
+    try {
+      await sendEscalationOtp(trimmed)
+      setOtpStage('sent')
+    } catch {
+      setOtpError("Couldn't send a code. You can still contact support without verifying.")
+    } finally {
+      setOtpBusy(false)
+    }
+  }
+
+  async function handleVerifyCode() {
+    const trimmed = phone.trim()
+    if (!trimmed || !otpCode.trim()) return
+    setOtpBusy(true)
+    setOtpError(null)
+    try {
+      const token = await verifyEscalationOtp(trimmed, otpCode.trim())
+      setVerifiedToken(token)
+      setVerifiedPhone(trimmed)
+      setOtpStage('verified')
+    } catch {
+      setOtpError('Incorrect code. Check the code and try again.')
+    } finally {
+      setOtpBusy(false)
+    }
+  }
+
   async function handleContactSupport() {
     if (!sessionId) return
     setBusy(true)
     setError(null)
     try {
-      const result = await escalate(sessionId, phone.trim())
+      const trimmed = phone.trim()
+      const tokenToUse = otpStage === 'verified' && verifiedPhone === trimmed ? (verifiedToken ?? undefined) : undefined
+      const result = await escalate(sessionId, trimmed, tokenToUse)
       setTicketId(result.ticketId)
     } catch {
       setError("We're having trouble connecting. Check your connection and try again.")
@@ -82,20 +139,51 @@ export default function Escalate() {
           <p className="text-sm font-medium text-error">Still unresolved</p>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-2">
           <label htmlFor="contact-phone" className="text-sm font-medium text-text">
             Callback number <span className="font-normal text-text-secondary">(optional)</span>
           </label>
-          <input
-            id="contact-phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="So an agent can reach you"
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-base text-text placeholder:text-text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          />
+          <div className="flex gap-2">
+            <input
+              id="contact-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(event) => handlePhoneChange(event.target.value)}
+              placeholder="So an agent can reach you"
+              disabled={otpStage === 'verified'}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-base text-text placeholder:text-text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+            />
+            {otpStage === 'idle' && (
+              <SecondaryButton onClick={handleSendCode} disabled={otpBusy || !phone.trim()}>
+                {otpBusy ? 'Sending…' : 'Send code'}
+              </SecondaryButton>
+            )}
+          </div>
+
+          {otpStage === 'sent' && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otpCode}
+                onChange={(event) => setOtpCode(event.target.value)}
+                placeholder="Enter the 6-digit code"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-base text-text placeholder:text-text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              />
+              <SecondaryButton onClick={handleVerifyCode} disabled={otpBusy || !otpCode.trim()}>
+                {otpBusy ? 'Verifying…' : 'Verify'}
+              </SecondaryButton>
+            </div>
+          )}
+
+          {otpStage === 'verified' && (
+            <p className="text-sm font-medium text-success">Number verified</p>
+          )}
+
+          {otpError && <p className="text-sm text-error">{otpError}</p>}
         </div>
 
         {error && <ErrorState title={error} inline />}

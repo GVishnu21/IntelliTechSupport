@@ -79,7 +79,10 @@ class GeminiVisionEngine(VisionEngine):
                 print(f"[gemini] {exc} — retrying in {wait}s (attempt {attempt}/{attempts})")
                 time.sleep(wait)
 
-    def interpret(self, image_base64: str) -> VisionReading:
+    def interpret(self, image_base64: str, session_id: str | None = None) -> VisionReading:
+        # session_id is part of the shared VisionEngine interface (the mock
+        # adapter needs it to avoid cross-session state) but real vision is
+        # genuinely stateless per photo, so it's unused here.
         # Fail safely end to end: a bad frame, a Gemini-side rejection, or an
         # unparseable response should degrade to "unknown, low confidence" —
         # never a crash, and never a guessed diagnosis (PRD UX principle).

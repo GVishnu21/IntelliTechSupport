@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS tickets (
 );
 
 ALTER TABLE tickets ADD COLUMN IF NOT EXISTS contact_phone TEXT;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS contact_phone_verified BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS customers (
+    id TEXT PRIMARY KEY,
+    phone TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    city TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS scans (
     id TEXT PRIMARY KEY,
@@ -53,14 +62,25 @@ def create_ticket(
     status_lights: dict,
     history: list[dict],
     contact_phone: str | None = None,
+    contact_phone_verified: bool = False,
 ) -> None:
     with get_connection() as conn:
         conn.execute(
             """
-            INSERT INTO tickets (id, session_id, equipment, status, status_lights, history, contact_phone)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO tickets
+                (id, session_id, equipment, status, status_lights, history, contact_phone, contact_phone_verified)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (ticket_id, session_id, equipment, "escalated", Json(status_lights), Json(history), contact_phone),
+            (
+                ticket_id,
+                session_id,
+                equipment,
+                "escalated",
+                Json(status_lights),
+                Json(history),
+                contact_phone,
+                contact_phone_verified,
+            ),
         )
 
 
@@ -79,6 +99,24 @@ def update_ticket_status(ticket_id: str, status: str) -> dict | None:
         return conn.execute(
             "UPDATE tickets SET status = %s WHERE id = %s RETURNING *",
             (status, ticket_id),
+        ).fetchone()
+
+
+# --- Customers: created (or refreshed) on OTP-verified signup/login. Phone
+# is the natural key -- a returning customer who signs up again with the
+# same phone updates their name/city rather than creating a duplicate row. ---
+
+
+def upsert_customer(customer_id: str, phone: str, name: str, city: str) -> dict:
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            INSERT INTO customers (id, phone, name, city)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, city = EXCLUDED.city
+            RETURNING *
+            """,
+            (customer_id, phone, name, city),
         ).fetchone()
 
 
@@ -119,6 +157,59 @@ def update_scan_feedback(scan_id: str, rating: int, feedback: str | None) -> dic
             "UPDATE scans SET rating = %s, feedback = %s WHERE id = %s RETURNING *",
             (rating, feedback, scan_id),
         ).fetchone()
+
+
+def get_recent_feedback(limit: int = 20) -> list[dict]:
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT id, session_id, equipment, outcome, rating, feedback, created_at
+            FROM scans
+            WHERE rating IS NOT NULL
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        ).fetchall()
+
+
+def get_feedback(scan_id: str) -> dict | None:
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT id, session_id, equipment, outcome, rating, feedback, created_at
+            FROM scans
+            WHERE id = %s AND rating IS NOT NULL
+            """,
+            (scan_id,),
+        ).fetchone()
+
+
+# Deliberately separate from get_scans_summary()/analytics -- this is
+# customer-voice framing (how are our ratings, not how's the operation
+# performing), so it stays its own small query rather than folding into the
+# Analytics aggregate.
+def get_feedback_summary() -> dict:
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT
+              COUNT(*) AS total,
+              AVG(rating) AS average_rating,
+              COUNT(*) FILTER (WHERE rating = 5) AS five_star_count,
+              COUNT(*) FILTER (WHERE rating <= 2) AS low_rating_count
+            FROM scans
+            WHERE rating IS NOT NULL
+            """
+        ).fetchone()
+
+    total = row["total"] or 0
+    return {
+        "total": total,
+        "average_rating": float(row["average_rating"]) if row["average_rating"] is not None else None,
+        "five_star_percent": (row["five_star_count"] / total) if total else 0.0,
+        "low_rating_count": row["low_rating_count"] or 0,
+    }
 
 
 def get_scans_summary() -> dict:

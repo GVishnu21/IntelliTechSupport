@@ -101,7 +101,11 @@ EQUIPMENT_CATALOG: dict[str, dict] = {
     # playbook works regardless of brand. Keeps the demo usable against real
     # hardware instead of only the hardcoded models.
     "Generic Router/Modem": {
-        "lights": ["internet"],
+        # "wifi" is listed even though no step below targets it specifically --
+        # its purpose here is to opt this SKU into the engine's Wi-Fi-off
+        # check (see engine.py::_is_healthy), matching what the vision
+        # prompt already asks Gemini to report for generic devices.
+        "lights": ["internet", "wifi"],
         "fault_light": "internet",
         "steps": [
             {

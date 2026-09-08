@@ -9,6 +9,12 @@ from app.vision.base import VisionReading
 _SESSIONS: dict[str, "Session"] = {}
 
 
+REBOOT_WAIT_STEP: dict = {
+    "instruction": "Your device looks like it's restarting. Wait about a minute, then take another photo to check again.",
+    "checklist": ["Waited at least 60 seconds", "Power light is solid, not blinking"],
+}
+
+
 @dataclass
 class Session:
     equipment: str
@@ -22,10 +28,35 @@ class Session:
     # the ticket only ever knowing the equipment name.
     last_status_lights: dict[str, str] = field(default_factory=dict)
     history: list[dict] = field(default_factory=list)
+    # All of this equipment's known lights (not just fault_light) -- lets
+    # _is_healthy also check "wifi" when it's present, instead of only ever
+    # looking at the one connectivity light.
+    lights: list[str] = field(default_factory=list)
+    # True while the customer is on the reboot-wait step rather than a real
+    # catalog step. step_index stays 0 the whole time this is set, so
+    # verify_step must check this flag first -- otherwise it would treat
+    # session.steps[0] as "attempted" (and silently skip it) the moment the
+    # customer's follow-up photo comes back, even though they were only ever
+    # told to wait, not to do that step.
+    awaiting_reboot: bool = False
 
 
-def _is_healthy(reading: VisionReading, fault_light: str) -> bool:
-    return reading.status_lights.get(fault_light) == HEALTHY_STATE
+def _is_healthy(reading: VisionReading, session: Session) -> bool:
+    if reading.status_lights.get(session.fault_light) != HEALTHY_STATE:
+        return False
+    # Wi-Fi can be off while the internet connection itself is fine -- that's
+    # a real, separate fault, not "all good". Only enforced when this
+    # equipment actually has a wifi light *and* the current reading reports
+    # one -- manual selection never reports a wifi light, so it's correctly
+    # exempt rather than permanently blocked from resolving.
+    if "wifi" in session.lights and "wifi" in reading.status_lights:
+        if reading.status_lights["wifi"] != HEALTHY_STATE:
+            return False
+    return True
+
+
+def _is_rebooting(reading: VisionReading) -> bool:
+    return reading.status_lights.get("power", "").startswith("blinking")
 
 
 def start_session(reading: VisionReading) -> tuple[Session, dict | None]:
@@ -36,12 +67,18 @@ def start_session(reading: VisionReading) -> tuple[Session, dict | None]:
         fault_light=spec["fault_light"],
         steps=list(spec["steps"]),
         last_status_lights=reading.status_lights,
+        lights=list(spec.get("lights", [])),
     )
 
-    if _is_healthy(reading, session.fault_light):
+    if _is_healthy(reading, session):
         session.resolved = True
         _SESSIONS[session.id] = session
         return session, None
+
+    if _is_rebooting(reading):
+        session.awaiting_reboot = True
+        _SESSIONS[session.id] = session
+        return session, REBOOT_WAIT_STEP
 
     _SESSIONS[session.id] = session
     return session, session.steps[0]
@@ -54,12 +91,21 @@ def verify_step(session_id: str, reading: VisionReading) -> tuple[bool, bool, di
         return False, True, None
 
     session.last_status_lights = reading.status_lights
-    attempted_step = session.steps[session.step_index]
+    attempted_step = REBOOT_WAIT_STEP if session.awaiting_reboot else session.steps[session.step_index]
 
-    if _is_healthy(reading, session.fault_light):
+    if _is_healthy(reading, session):
         session.resolved = True
         session.history.append({"step": attempted_step["instruction"], "outcome": "completed"})
         return True, False, None
+
+    if session.awaiting_reboot:
+        # Whether or not it finished rebooting, the underlying fault is
+        # still there -- move into the real step chain at step 0, which
+        # hasn't actually been attempted yet (step_index was never touched
+        # while waiting).
+        session.awaiting_reboot = False
+        session.history.append({"step": attempted_step["instruction"], "outcome": "failed"})
+        return False, False, session.steps[0]
 
     session.history.append({"step": attempted_step["instruction"], "outcome": "failed"})
     session.step_index += 1
@@ -76,6 +122,14 @@ def skip_step(session_id: str) -> tuple[bool, dict | None]:
     session = _SESSIONS.get(session_id)
     if session is None:
         return True, None
+
+    if session.awaiting_reboot:
+        # Same reasoning as verify_step: step_index hasn't moved off 0 yet,
+        # so skipping the wait step means "give me the real steps," not
+        # "advance past step 0" -- it must not touch step_index.
+        session.awaiting_reboot = False
+        session.history.append({"step": REBOOT_WAIT_STEP["instruction"], "outcome": "skipped"})
+        return False, session.steps[0]
 
     attempted_step = session.steps[session.step_index]
     session.history.append({"step": attempted_step["instruction"], "outcome": "skipped"})

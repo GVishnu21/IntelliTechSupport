@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { BadgeCheck } from 'lucide-react'
 import { getTicket, updateTicketStatus } from '../../services/api'
 import { AdminLayout } from '../../components/layout/AdminLayout'
 import { AdminHeaderActions } from '../../components/layout/AdminHeaderActions'
@@ -88,7 +89,15 @@ export default function AdminTicketDetails() {
               {ticket.contactPhone && (
                 <>
                   <p className="mt-2 text-sm text-text-secondary">Callback number</p>
-                  <p className="text-base font-medium text-text">{ticket.contactPhone}</p>
+                  <p className="flex items-center gap-1.5 text-base font-medium text-text">
+                    {ticket.contactPhone}
+                    {ticket.contactPhoneVerified && (
+                      <span className="flex items-center gap-1 text-sm font-medium text-success">
+                        <BadgeCheck size={16} aria-hidden="true" />
+                        Verified
+                      </span>
+                    )}
+                  </p>
                 </>
               )}
               <p className="mt-2 text-sm text-text-secondary">Router</p>

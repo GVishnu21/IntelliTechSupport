@@ -39,6 +39,7 @@ describe('AdminLayout', () => {
     expect(screen.getByText('page content')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Dashboard/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Support Tickets/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Feedback/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Analytics/ })).toBeInTheDocument()
   })
 

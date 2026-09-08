@@ -1,7 +1,9 @@
 import type {
   AnalyticsSummary,
   DetectionConfidence,
+  FeedbackSummary,
   OutageInfo,
+  RecentFeedback,
   RouterCatalogEntry,
   RouterDiagnosis,
   SupportTicket,
@@ -11,6 +13,7 @@ import type {
 } from '../types'
 import { parseLedReadings } from '../utils/led'
 import { MOCK_OUTAGE, MOCK_REPEAT_CONTACT_RATE, ROUTER_CATALOG } from '../data/mockData'
+import { clearAdminToken, getAdminToken } from './adminAuth'
 
 interface BackendStepInfo {
   instruction: string
@@ -45,12 +48,42 @@ interface BackendTicket {
   status_lights: Record<string, string>
   history: Array<{ step: string; outcome: 'completed' | 'failed' | 'skipped' }>
   contact_phone: string | null
+  contact_phone_verified: boolean
   created_at: string
 }
 
 interface BackendSkipStepResponse {
   escalate: boolean
   next_step: BackendStepInfo | null
+}
+
+interface BackendFeedback {
+  id: string
+  session_id: string | null
+  equipment: string
+  outcome: string
+  rating: number
+  feedback: string | null
+  created_at: string
+}
+
+interface BackendFeedbackSummary {
+  total: number
+  average_rating: number | null
+  five_star_percent: number
+  low_rating_count: number
+}
+
+function toRecentFeedback(entry: BackendFeedback): RecentFeedback {
+  return {
+    id: entry.id,
+    sessionId: entry.session_id,
+    equipment: entry.equipment,
+    outcome: entry.outcome,
+    rating: entry.rating,
+    feedback: entry.feedback,
+    createdAt: entry.created_at,
+  }
 }
 
 interface BackendAnalyticsSummary {
@@ -127,6 +160,7 @@ function toSupportTicket(raw: BackendTicket): SupportTicket {
     history: raw.history,
     aiDiagnosis: issue,
     contactPhone: raw.contact_phone ?? undefined,
+    contactPhoneVerified: raw.contact_phone_verified,
   }
 }
 
@@ -171,6 +205,26 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// Only the admin-facing calls below need this -- everything else in this
+// file is the customer flow, which has no login at all. A 401 here means
+// the token expired or was never set, so drop it: the admin route guard
+// checks getAdminToken() on the next render and sends the user back to
+// /admin/login instead of leaving them stuck on a page that 401s forever.
+async function adminFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = getAdminToken()
+  const res = await fetch(`/api${path}`, {
+    ...options,
+    headers: {
+      ...(options.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
+  if (res.status === 401) {
+    clearAdminToken()
+  }
+  return res
+}
+
 export async function analyzeRouter(imageBase64: string): Promise<RouterDiagnosis> {
   const res = await postJson<BackendDiagnosisResponse>('/diagnose', { image_base64: imageBase64 })
   return toDiagnosis(res)
@@ -201,12 +255,32 @@ export async function verifyStepWithPhoto(sessionId: string, imageBase64: string
   }
 }
 
-export async function escalate(sessionId: string, contactPhone?: string): Promise<{ ticketId: string }> {
+export async function escalate(
+  sessionId: string,
+  contactPhone?: string,
+  phoneVerifiedToken?: string,
+): Promise<{ ticketId: string }> {
   const res = await postJson<{ ticket_id: string }>('/escalate', {
     session_id: sessionId,
     contact_phone: contactPhone || null,
+    phone_verified_token: phoneVerifiedToken || null,
   })
   return { ticketId: res.ticket_id }
+}
+
+// Optional customer identity verification before escalating (PRD IT-5) --
+// never blocks the "Contact Support" button itself, just lets a verified
+// phone number ride along on the ticket when the customer chooses to confirm it.
+export async function sendEscalationOtp(contactPhone: string): Promise<void> {
+  await postJson('/escalate/send-otp', { contact_phone: contactPhone })
+}
+
+export async function verifyEscalationOtp(contactPhone: string, code: string): Promise<string> {
+  const res = await postJson<{ verified_token: string }>('/escalate/verify-otp', {
+    contact_phone: contactPhone,
+    code,
+  })
+  return res.verified_token
 }
 
 export async function skipStep(sessionId: string): Promise<{ escalate: boolean; nextStep: TroubleshootingStep | null }> {
@@ -215,7 +289,7 @@ export async function skipStep(sessionId: string): Promise<{ escalate: boolean; 
 }
 
 export async function getTickets(): Promise<SupportTicket[]> {
-  const res = await fetch('/api/tickets')
+  const res = await adminFetch('/tickets')
   if (!res.ok) {
     throw new Error(`Request failed: ${res.status}`)
   }
@@ -224,7 +298,7 @@ export async function getTickets(): Promise<SupportTicket[]> {
 }
 
 export async function getTicket(id: string): Promise<SupportTicket | undefined> {
-  const res = await fetch(`/api/tickets/${id}`)
+  const res = await adminFetch(`/tickets/${id}`)
   if (res.status === 404) {
     return undefined
   }
@@ -236,7 +310,7 @@ export async function getTicket(id: string): Promise<SupportTicket | undefined> 
 }
 
 export async function updateTicketStatus(id: string, status: TicketStatus): Promise<SupportTicket> {
-  const res = await fetch(`/api/tickets/${id}`, {
+  const res = await adminFetch(`/tickets/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
@@ -259,8 +333,43 @@ export async function submitScanFeedback(scanId: string, rating: number, feedbac
   }
 }
 
+export async function getRecentFeedback(limit = 20): Promise<RecentFeedback[]> {
+  const res = await adminFetch(`/feedback/recent?limit=${limit}`)
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const raw = (await res.json()) as BackendFeedback[]
+  return raw.map(toRecentFeedback)
+}
+
+export async function getFeedback(id: string): Promise<RecentFeedback | undefined> {
+  const res = await adminFetch(`/feedback/${id}`)
+  if (res.status === 404) {
+    return undefined
+  }
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const raw = (await res.json()) as BackendFeedback
+  return toRecentFeedback(raw)
+}
+
+export async function getFeedbackSummary(): Promise<FeedbackSummary> {
+  const res = await adminFetch('/feedback/summary')
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+  const raw = (await res.json()) as BackendFeedbackSummary
+  return {
+    total: raw.total,
+    averageRating: raw.average_rating,
+    fiveStarPercent: raw.five_star_percent,
+    lowRatingCount: raw.low_rating_count,
+  }
+}
+
 export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
-  const res = await fetch('/api/analytics/summary')
+  const res = await adminFetch('/analytics/summary')
   if (!res.ok) {
     throw new Error(`Request failed: ${res.status}`)
   }

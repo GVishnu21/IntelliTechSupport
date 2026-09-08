@@ -23,9 +23,11 @@ class FakeVisionEngine:
     def __init__(self, reading: VisionReading):
         self.reading = reading
         self.calls: list[str] = []
+        self.session_ids: list[str | None] = []
 
-    def interpret(self, image_base64: str) -> VisionReading:
+    def interpret(self, image_base64: str, session_id: str | None = None) -> VisionReading:
         self.calls.append(image_base64)
+        self.session_ids.append(session_id)
         return self.reading
 
 
@@ -36,6 +38,7 @@ class FakeDb:
     def __init__(self):
         self.scans: dict[str, dict] = {}
         self.tickets: dict[str, dict] = {}
+        self.customers: dict[str, dict] = {}  # keyed by phone, the natural key
         self.scan_outcome_calls: list[dict] = []
         self.feedback_calls: list[tuple] = []
         self.analytics_summary: dict = {
@@ -52,11 +55,15 @@ class FakeDb:
 
     def create_scan(self, scan_id, session_id, equipment, outcome):
         self.scans[scan_id] = {
+            "id": scan_id,
             "session_id": session_id,
             "equipment": equipment,
             "outcome": outcome,
             "steps_completed": 0,
             "history": [],
+            "rating": None,
+            "feedback": None,
+            "created_at": "2026-09-07T00:00:00Z",
         }
 
     def update_scan_outcome(self, session_id, outcome, steps_completed, history):
@@ -78,7 +85,9 @@ class FakeDb:
         scan["feedback"] = feedback
         return scan
 
-    def create_ticket(self, ticket_id, session_id, equipment, status_lights, history, contact_phone=None):
+    def create_ticket(
+        self, ticket_id, session_id, equipment, status_lights, history, contact_phone=None, contact_phone_verified=False
+    ):
         self.tickets[ticket_id] = {
             "id": ticket_id,
             "session_id": session_id,
@@ -87,8 +96,15 @@ class FakeDb:
             "status_lights": status_lights,
             "history": history,
             "contact_phone": contact_phone,
+            "contact_phone_verified": contact_phone_verified,
             "created_at": "2026-09-07T00:00:00Z",
         }
+
+    def upsert_customer(self, customer_id, phone, name, city):
+        existing = self.customers.get(phone)
+        customer = {"id": existing["id"] if existing else customer_id, "phone": phone, "name": name, "city": city}
+        self.customers[phone] = customer
+        return customer
 
     def list_tickets(self):
         return list(self.tickets.values())
@@ -106,6 +122,27 @@ class FakeDb:
     def get_scans_summary(self):
         return self.analytics_summary
 
+    def get_recent_feedback(self, limit=20):
+        rated = [scan for scan in self.scans.values() if scan.get("rating") is not None]
+        rated.sort(key=lambda scan: scan["created_at"], reverse=True)
+        return rated[:limit]
+
+    def get_feedback(self, scan_id):
+        scan = self.scans.get(scan_id)
+        if scan is None or scan.get("rating") is None:
+            return None
+        return scan
+
+    def get_feedback_summary(self):
+        rated = [scan for scan in self.scans.values() if scan.get("rating") is not None]
+        total = len(rated)
+        return {
+            "total": total,
+            "average_rating": (sum(s["rating"] for s in rated) / total) if total else None,
+            "five_star_percent": (sum(1 for s in rated if s["rating"] == 5) / total) if total else 0.0,
+            "low_rating_count": sum(1 for s in rated if s["rating"] <= 2),
+        }
+
 
 @pytest.fixture
 def fake_db(monkeypatch):
@@ -115,10 +152,14 @@ def fake_db(monkeypatch):
         "update_scan_outcome",
         "update_scan_feedback",
         "create_ticket",
+        "upsert_customer",
         "list_tickets",
         "get_ticket",
         "update_ticket_status",
         "get_scans_summary",
+        "get_recent_feedback",
+        "get_feedback",
+        "get_feedback_summary",
     ):
         monkeypatch.setattr(f"app.main.{name}", getattr(db, name))
     return db
@@ -140,3 +181,10 @@ def set_vision_reading(monkeypatch):
 @pytest.fixture
 def client(fake_db):
     return TestClient(fastapi_app)
+
+
+@pytest.fixture
+def admin_headers():
+    from app.auth import create_admin_token
+
+    return {"Authorization": f"Bearer {create_admin_token()}"}

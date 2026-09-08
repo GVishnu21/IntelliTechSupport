@@ -232,7 +232,9 @@ describe('escalate', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/escalate',
-      expect.objectContaining({ body: JSON.stringify({ session_id: 'session-1', contact_phone: null }) })
+      expect.objectContaining({
+        body: JSON.stringify({ session_id: 'session-1', contact_phone: null, phone_verified_token: null }),
+      })
     )
   })
 
@@ -244,7 +246,23 @@ describe('escalate', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/escalate',
-      expect.objectContaining({ body: JSON.stringify({ session_id: 'session-1', contact_phone: '555-0100' }) })
+      expect.objectContaining({
+        body: JSON.stringify({ session_id: 'session-1', contact_phone: '555-0100', phone_verified_token: null }),
+      })
+    )
+  })
+
+  it('sends the verified token when the customer confirmed their number', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ticket_id: 'TS-9001' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await escalate('session-1', '555-0100', 'tok-abc')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/escalate',
+      expect.objectContaining({
+        body: JSON.stringify({ session_id: 'session-1', contact_phone: '555-0100', phone_verified_token: 'tok-abc' }),
+      })
     )
   })
 })
@@ -303,6 +321,7 @@ describe('getTickets', () => {
             status: 'escalated',
             status_lights: { power: 'solid_green', internet: 'blinking_red' },
             history: [{ step: 'Restart the router', outcome: 'failed' }],
+            contact_phone_verified: false,
             created_at: '2026-09-07T12:00:00Z',
           },
         ],
@@ -324,6 +343,7 @@ describe('getTickets', () => {
         ],
         history: [{ step: 'Restart the router', outcome: 'failed' }],
         aiDiagnosis: "We're not receiving an internet signal.",
+        contactPhoneVerified: false,
       },
     ])
   })
@@ -352,6 +372,7 @@ describe('getTicket', () => {
           status: 'escalated',
           status_lights: {},
           history: [],
+          contact_phone_verified: false,
           created_at: '2026-09-07T12:00:00Z',
         }),
       })
@@ -375,6 +396,7 @@ describe('getTicket', () => {
           status_lights: {},
           history: [],
           contact_phone: '555-0100',
+          contact_phone_verified: true,
           created_at: '2026-09-07T12:00:00Z',
         }),
       })
@@ -382,6 +404,7 @@ describe('getTicket', () => {
 
     const ticket = await getTicket('ITS-ABCD1234')
     expect(ticket?.contactPhone).toBe('555-0100')
+    expect(ticket?.contactPhoneVerified).toBe(true)
   })
 })
 

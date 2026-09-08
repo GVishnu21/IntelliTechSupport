@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { SecondaryButton } from '../components/ui/SecondaryButton'
 import { DiagnosisCard } from '../components/diagnosis/DiagnosisCard'
 import { checkOutage } from '../services/api'
+import { getCustomerProfile } from '../services/customerAuth'
 import type { RouterDiagnosis } from '../types'
 
 interface DiagnosisLocationState {
@@ -30,7 +31,14 @@ export default function Diagnosis() {
 
     checkOutage().then((outage) => {
       if (outage.active) {
-        navigate('/outage', { replace: true, state: { outage, diagnosis } })
+        // The outage check itself is still mock (no real outage feed), but
+        // the area shown is real now that login captures the customer's
+        // city, instead of the generic "Your area" placeholder.
+        const city = getCustomerProfile()?.city
+        navigate('/outage', {
+          replace: true,
+          state: { outage: city ? { ...outage, area: city } : outage, diagnosis },
+        })
       }
     })
   }, [diagnosis, skipOutageCheck, navigate])

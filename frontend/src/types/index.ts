@@ -67,6 +67,10 @@ export interface SupportTicket {
   // number when escalating. There's no login, so this is the only real
   // contact info a ticket can ever have.
   contactPhone?: string
+  // True only when the customer verified this number with an OTP before
+  // escalating (PRD IT-5) -- verification is optional, so most tickets with
+  // a contactPhone will still have this false.
+  contactPhoneVerified: boolean
 }
 
 export interface RouterCatalogEntry {
@@ -88,6 +92,42 @@ export interface TrendPoint {
 export interface LabeledCount {
   label: string
   count: number
+}
+
+export interface RecentFeedback {
+  id: string
+  // Real, but disjoint from tickets -- feedback only happens on a resolved
+  // session (Success page), tickets only exist for escalated ones, so a
+  // feedback entry's session never has a matching ticket. sessionId is the
+  // one real cross-reference these entries carry.
+  sessionId: string | null
+  equipment: string
+  outcome: string
+  rating: number
+  feedback: string | null
+  createdAt: string
+}
+
+export interface FeedbackSummary {
+  total: number
+  averageRating: number | null
+  fiveStarPercent: number
+  lowRatingCount: number
+}
+
+export type AppNotificationType = 'ticket' | 'feedback'
+
+// Modular by design: today built from tickets + feedback, but any future
+// source (e.g. a new alert type) only needs to map into this same shape --
+// the bell/dropdown UI doesn't know or care where a notification came from.
+export interface AppNotification {
+  id: string
+  type: AppNotificationType
+  title: string
+  description: string
+  createdAt: string
+  // Where clicking the notification navigates.
+  href?: string
 }
 
 // Real, computed server-side from the scans table (every /diagnose call,

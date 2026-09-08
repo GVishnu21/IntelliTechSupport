@@ -32,21 +32,35 @@ SHOULD/COULD in the PRD) are intentionally out of scope for this phase.
 ```
 cd backend
 python -m venv venv
-./venv/Scripts/pip install -r requirements.txt   # venv/bin/pip on macOS/Linux
-./venv/Scripts/python -m uvicorn app.main:app --port 8000
+.\venv\Scripts\activate           # source venv/bin/activate on macOS/Linux
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
-Runs against the mock vision engine by default — no API key needed. To use
-real image recognition, copy `.env.example` to `.env` and set
-`GEMINI_API_KEY` (free tier: https://aistudio.google.com).
+Copy `.env.example` to `.env` first and fill in:
+- `GEMINI_API_KEY` — leave unset to run against the mock vision engine (no
+  key needed); set it for real recognition (free tier:
+  https://aistudio.google.com).
+- `DATABASE_URL` — a Postgres connection string. Needed for tickets, scans,
+  and everything the admin Analytics/Dashboard pages show.
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` — the credentials the `/admin` section's
+  login page checks.
+
+Skip `--reload` — restart manually (Ctrl+C, rerun) after editing backend
+code instead. If a port ever looks stuck (a freshly-started process still
+404s on a route you know exists in the code, "address already in use"),
+check what's actually bound to that port before assuming it's a code bug —
+`Ctrl+C` doesn't always release the OS-level socket immediately.
 
 **Frontend**
 ```
 cd frontend
 npm install
-npm run dev
+npm run dev -- --port 5173
 ```
-Open the printed localhost URL on a device with a camera (or a desktop
-browser that will prompt for webcam access).
+`vite.config.ts` already sets `host: true`, so this alone gives you an
+HTTPS, LAN-accessible instance — open the printed URL on a device with a
+camera (or a desktop browser that will prompt for webcam access). Customer
+flow starts at `/`, admin login is at `/admin/login`.
 
 ## Known Phase-1 simplifications
 

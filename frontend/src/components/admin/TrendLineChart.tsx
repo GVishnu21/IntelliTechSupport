@@ -99,6 +99,7 @@ export function TrendLineChart({
                 dataKey="date"
                 tick={{ fontSize: 12, fill: axisTickColor }}
                 tickLine={false}
+                tickMargin={8}
                 axisLine={{ stroke: gridColor }}
                 minTickGap={32}
               />

@@ -1,16 +1,59 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CircleHelp, Router } from 'lucide-react'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
+import { CustomerSignupModal } from '../components/auth/CustomerSignupModal'
 import { BUTTON_PRIMARY_CLASS, BUTTON_SECONDARY_CLASS } from '../components/ui/buttonStyles'
 import { loadActiveSession } from '../utils/sessionContinuity'
+import { getCustomerToken } from '../services/customerAuth'
+
+const SIGNUP_PROMPT_DELAY_MS = 4000
+
+interface HomeLocationState {
+  // Set by RequireCustomerAuth when an unauthenticated customer deep-links
+  // into a protected route -- Home opens the sign-up popup immediately and
+  // sends them on to this path once they finish, instead of stranding them
+  // on a separate login page.
+  from?: string
+}
 
 export default function Home() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [activeSession] = useState(() => loadActiveSession())
+  const redirectedFrom = (location.state as HomeLocationState)?.from ?? null
+  // A deep-link redirect (RequireCustomerAuth) opens the popup immediately;
+  // otherwise it opens after a short delay so the scanner screen is the
+  // first thing a new visitor actually sees. Both are resolved as initial
+  // state (derived from render, not an effect) since they only depend on
+  // how this page was entered, not on anything that changes afterward.
+  const [signupOpen, setSignupOpen] = useState(() => !getCustomerToken() && !!redirectedFrom)
+  const [pendingPath, setPendingPath] = useState<string | null>(redirectedFrom)
+
+  useEffect(() => {
+    if (getCustomerToken() || redirectedFrom) return
+
+    const timer = setTimeout(() => setSignupOpen(true), SIGNUP_PROMPT_DELAY_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only ever needs to run once, on mount
+  }, [])
+
+  function goTo(path: string) {
+    if (getCustomerToken()) {
+      navigate(path)
+      return
+    }
+    setPendingPath(path)
+    setSignupOpen(true)
+  }
 
   function handleContinue() {
     if (!activeSession) return
+    if (!getCustomerToken()) {
+      setPendingPath(null)
+      setSignupOpen(true)
+      return
+    }
     navigate('/troubleshoot', {
       state: {
         sessionId: activeSession.sessionId,
@@ -20,6 +63,14 @@ export default function Home() {
         stepsCompleted: activeSession.stepsCompleted,
       },
     })
+  }
+
+  function handleSignupSuccess() {
+    setSignupOpen(false)
+    if (pendingPath) {
+      navigate(pendingPath)
+      setPendingPath(null)
+    }
   }
 
   return (
@@ -52,12 +103,12 @@ export default function Home() {
         </div>
 
         <div className="w-full space-y-3">
-          <Link to="/scan" className={BUTTON_PRIMARY_CLASS}>
+          <button type="button" onClick={() => goTo('/scan')} className={BUTTON_PRIMARY_CLASS}>
             Scan My Router
-          </Link>
-          <Link to="/select-router" className={BUTTON_SECONDARY_CLASS}>
+          </button>
+          <button type="button" onClick={() => goTo('/select-router')} className={BUTTON_SECONDARY_CLASS}>
             Select Router Manually
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -84,6 +135,12 @@ export default function Home() {
           </button>
         </div>
       </div>
+
+      <CustomerSignupModal
+        open={signupOpen}
+        onClose={() => setSignupOpen(false)}
+        onSuccess={handleSignupSuccess}
+      />
     </CustomerLayout>
   )
 }

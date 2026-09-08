@@ -17,5 +17,5 @@ class VisionEngine(ABC):
     """
 
     @abstractmethod
-    def interpret(self, image_base64: str) -> VisionReading:
+    def interpret(self, image_base64: str, session_id: str | None = None) -> VisionReading:
         raise NotImplementedError

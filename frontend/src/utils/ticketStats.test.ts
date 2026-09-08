@@ -13,6 +13,7 @@ function makeTicket(overrides: Partial<SupportTicket>): SupportTicket {
     ledStatus: [{ name: 'Internet', color: 'red', state: 'blinking' }],
     history: [],
     aiDiagnosis: "We're not receiving an internet signal.",
+    contactPhoneVerified: false,
     ...overrides,
   }
 }
