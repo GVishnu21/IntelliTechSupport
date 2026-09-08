@@ -93,7 +93,7 @@ export function TrendLineChart({
           aria-label={`${title} line chart, ${data.length} data points, most recent value ${latest ? valueFormatter(latest.value) : 'unavailable'}`}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+            <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid stroke={gridColor} vertical={false} />
               <XAxis
                 dataKey="date"
@@ -107,7 +107,7 @@ export function TrendLineChart({
                 tick={{ fontSize: 12, fill: axisTickColor }}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={44}
               />
               <Tooltip formatter={(value) => valueFormatter(Number(value))} contentStyle={tooltipStyle} />
               <Line type="monotone" dataKey="value" stroke={lineColor} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
