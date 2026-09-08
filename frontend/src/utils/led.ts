@@ -2,6 +2,16 @@ import type { LedColor, LedReading, LedSemanticStatus, LedState } from '../types
 
 const KNOWN_COLORS: LedColor[] = ['green', 'red', 'amber', 'gray']
 
+// Single source of truth for the dot color used everywhere a light reading
+// is rendered (LedStatus, and the manual-selection light picker) -- so a
+// palette change only ever needs to happen in one place.
+export const LED_DOT_COLOR_CLASS: Record<LedColor, string> = {
+  green: 'bg-success',
+  red: 'bg-error',
+  amber: 'bg-warning',
+  gray: 'bg-slate-300 dark:bg-slate-600',
+}
+
 export function parseLedString(raw: string): { color: LedColor; state: LedState } {
   if (!raw || raw === 'off') {
     return { color: 'gray', state: 'off' }

@@ -14,6 +14,12 @@ describe('ROUTER_CATALOG', () => {
       expect(entry.model).toBeTruthy()
     }
   })
+
+  it('every entry maps to a real backend equipment name', () => {
+    for (const entry of ROUTER_CATALOG) {
+      expect(entry.backendEquipment).toBeTruthy()
+    }
+  })
 })
 
 describe('MOCK_OUTAGE', () => {

@@ -10,7 +10,7 @@ import type {
   VerifyResult,
 } from '../types'
 import { parseLedReadings } from '../utils/led'
-import { MOCK_OUTAGE, MOCK_REPEAT_CONTACT_RATE, ROUTER_CATALOG, mockDiagnosisForRouter } from '../data/mockData'
+import { MOCK_OUTAGE, MOCK_REPEAT_CONTACT_RATE, ROUTER_CATALOG } from '../data/mockData'
 
 interface BackendStepInfo {
   instruction: string
@@ -176,6 +176,19 @@ export async function analyzeRouter(imageBase64: string): Promise<RouterDiagnosi
   return toDiagnosis(res)
 }
 
+// Manual-selection fallback: the customer told us the equipment and what
+// its one meaningful light looks like, instead of a photo. Goes through the
+// same /select-equipment -> real session/orchestration path as a photo
+// would, so everything downstream (Troubleshoot, Verify, Escalate) works
+// identically either way.
+export async function selectEquipment(equipment: string, faultLightState: string): Promise<RouterDiagnosis> {
+  const res = await postJson<BackendDiagnosisResponse>('/select-equipment', {
+    equipment,
+    fault_light_state: faultLightState,
+  })
+  return toDiagnosis(res)
+}
+
 export async function verifyStepWithPhoto(sessionId: string, imageBase64: string): Promise<VerifyResult> {
   const res = await postJson<BackendVerifyStepResponse>('/verify-step', {
     image_base64: imageBase64,
@@ -264,10 +277,6 @@ export async function checkOutage(): Promise<OutageInfo> {
 
 export function getRouterCatalog(): RouterCatalogEntry[] {
   return ROUTER_CATALOG
-}
-
-export function getMockDiagnosis(entry: RouterCatalogEntry): RouterDiagnosis {
-  return mockDiagnosisForRouter(entry)
 }
 
 export function getRepeatContactRate(): number {

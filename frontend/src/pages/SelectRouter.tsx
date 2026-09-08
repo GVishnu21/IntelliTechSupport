@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CustomerLayout } from '../components/layout/CustomerLayout'
 import { EmptyState } from '../components/ui/EmptyState'
-import { getMockDiagnosis, getRouterCatalog } from '../services/api'
+import { getRouterCatalog } from '../services/api'
 import type { RouterCatalogEntry } from '../types'
 
 export default function SelectRouter() {
@@ -25,8 +25,7 @@ export default function SelectRouter() {
   })
 
   function handleSelect(entry: RouterCatalogEntry) {
-    const diagnosis = getMockDiagnosis(entry)
-    navigate('/diagnosis', { replace: true, state: { diagnosis } })
+    navigate('/select-light', { state: { entry } })
   }
 
   return (

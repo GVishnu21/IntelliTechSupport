@@ -8,6 +8,7 @@ import {
   getRouterCatalog,
   getTicket,
   getTickets,
+  selectEquipment,
   skipStep,
   submitScanFeedback,
   updateTicketStatus,
@@ -86,6 +87,42 @@ describe('analyzeRouter', () => {
   it('throws when the backend responds with an error status', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
     await expect(analyzeRouter('img')).rejects.toThrow('Request failed: 500')
+  })
+})
+
+describe('selectEquipment', () => {
+  it('posts the equipment and light state, and maps the response like analyzeRouter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        session_id: 'manual-session-1',
+        scan_id: 'manual-session-1',
+        equipment: 'Generic Router/Modem',
+        confidence: 1.0,
+        status_lights: { internet: 'blinking_red' },
+        next_step: { instruction: 'Power cycle the device.', step_number: 1, total_steps: 3 },
+        low_confidence: false,
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await selectEquipment('Generic Router/Modem', 'blinking_red')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/select-equipment',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ equipment: 'Generic Router/Modem', fault_light_state: 'blinking_red' }),
+      })
+    )
+    expect(result.sessionId).toBe('manual-session-1')
+    expect(result.scanId).toBe('manual-session-1')
+    expect(result.firstStep?.description).toBe('Power cycle the device.')
+  })
+
+  it('throws when the backend rejects the equipment or light state', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400 }))
+    await expect(selectEquipment('Not A Real Router', 'off')).rejects.toThrow('Request failed: 400')
   })
 })
 

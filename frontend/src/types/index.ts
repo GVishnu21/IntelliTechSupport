@@ -74,6 +74,10 @@ export interface RouterCatalogEntry {
   provider: string
   brand: string
   model: string
+  // The real backend playbook this entry maps to. Several provider-branded
+  // entries have no SKU-specific playbook, so they map to the generic one --
+  // see mockData.ts for which.
+  backendEquipment: string
 }
 
 export interface TrendPoint {

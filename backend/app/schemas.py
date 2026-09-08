@@ -34,6 +34,11 @@ class VerifyStepResponse(BaseModel):
     status_lights: dict[str, str]
 
 
+class SelectEquipmentRequest(BaseModel):
+    equipment: str
+    fault_light_state: str
+
+
 class SkipStepRequest(BaseModel):
     session_id: str
 

@@ -24,6 +24,7 @@ from app.schemas import (
     EscalateResponse,
     ImageRequest,
     ScanFeedbackRequest,
+    SelectEquipmentRequest,
     SkipStepRequest,
     SkipStepResponse,
     StepInfo,
@@ -32,6 +33,9 @@ from app.schemas import (
     VerifyStepResponse,
 )
 from app.vision import get_vision_engine
+from app.vision.base import VisionReading
+
+VALID_LIGHT_STATES = {"solid_green", "blinking_amber", "blinking_red", "solid_red", "off"}
 
 app = FastAPI(title="Intelli TechSupport API")
 
@@ -104,6 +108,55 @@ def diagnose(payload: ImageRequest) -> DiagnosisResponse:
         scan_id=session.id,
         equipment=reading.equipment,
         confidence=reading.confidence,
+        status_lights=reading.status_lights,
+        next_step=next_step,
+        low_confidence=False,
+    )
+
+
+@app.post("/select-equipment", response_model=DiagnosisResponse)
+def select_equipment(payload: SelectEquipmentRequest) -> DiagnosisResponse:
+    # Manual-selection fallback (IT-1) for when the camera can't get a
+    # confident read. The customer already told us the equipment model, so
+    # there's no vision call -- we only need their answer for the one light
+    # the playbook actually checks, wrapped in a VisionReading so it flows
+    # through the exact same session/orchestration logic as /diagnose.
+    if payload.equipment not in EQUIPMENT_CATALOG:
+        raise HTTPException(status_code=400, detail="Unknown equipment")
+    if payload.fault_light_state not in VALID_LIGHT_STATES:
+        raise HTTPException(status_code=400, detail="Unknown light state")
+
+    spec = EQUIPMENT_CATALOG[payload.equipment]
+    reading = VisionReading(
+        equipment=payload.equipment,
+        confidence=1.0,
+        status_lights={spec["fault_light"]: payload.fault_light_state},
+    )
+
+    session, first_step = start_session(reading)
+    create_scan(
+        scan_id=session.id,
+        session_id=session.id,
+        equipment=payload.equipment,
+        outcome="resolved" if not first_step else "in_progress",
+    )
+    next_step = (
+        StepInfo(
+            instruction=first_step["instruction"],
+            step_number=1,
+            total_steps=len(session.steps),
+            checklist=first_step.get("checklist", []),
+            note=first_step.get("note"),
+        )
+        if first_step
+        else None
+    )
+
+    return DiagnosisResponse(
+        session_id=session.id,
+        scan_id=session.id,
+        equipment=payload.equipment,
+        confidence=1.0,
         status_lights=reading.status_lights,
         next_step=next_step,
         low_confidence=False,

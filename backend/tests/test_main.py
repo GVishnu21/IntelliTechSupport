@@ -88,6 +88,58 @@ class TestDiagnose:
         assert res.json()["low_confidence"] is True
 
 
+class TestSelectEquipment:
+    def test_unknown_equipment_is_a_400(self, client):
+        res = client.post(
+            "/select-equipment", json={"equipment": "Not A Real Router", "fault_light_state": "off"}
+        )
+        assert res.status_code == 400
+
+    def test_unknown_light_state_is_a_400(self, client):
+        res = client.post(
+            "/select-equipment", json={"equipment": EQUIPMENT, "fault_light_state": "shiny"}
+        )
+        assert res.status_code == 400
+
+    def test_reported_fault_state_returns_a_real_first_step(self, client, fake_db):
+        res = client.post(
+            "/select-equipment",
+            json={"equipment": EQUIPMENT, "fault_light_state": "blinking_red"},
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert body["low_confidence"] is False
+        assert body["session_id"] == body["scan_id"]
+        assert body["next_step"]["step_number"] == 1
+        assert fake_db.scans[body["scan_id"]]["outcome"] == "in_progress"
+
+    def test_reported_healthy_state_resolves_immediately(self, client, fake_db):
+        res = client.post(
+            "/select-equipment",
+            json={"equipment": EQUIPMENT, "fault_light_state": "solid_green"},
+        )
+
+        body = res.json()
+        assert body["next_step"] is None
+        assert fake_db.scans[body["scan_id"]]["outcome"] == "resolved"
+
+    def test_returned_session_id_works_against_verify_step(self, client, fake_db, set_vision_reading):
+        diagnosis = client.post(
+            "/select-equipment",
+            json={"equipment": EQUIPMENT, "fault_light_state": "blinking_red"},
+        ).json()
+
+        set_vision_reading(healthy_reading())
+        res = client.post(
+            "/verify-step", json={"image_base64": "fake", "session_id": diagnosis["session_id"]}
+        )
+
+        body = res.json()
+        assert body["resolved"] is True
+        assert body["escalate"] is False
+
+
 class TestVerifyStep:
     def test_missing_session_id_is_a_400(self, client):
         res = client.post("/verify-step", json={"image_base64": "fake"})
